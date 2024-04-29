@@ -21,6 +21,7 @@ pipenv sync
 pipenv shell
 # install pre-commit
 pre-commit install
+pre-commit install --hook-type commit-msg
 
 # if want to exit virtual environment
 exit
