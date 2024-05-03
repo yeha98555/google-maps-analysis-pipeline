@@ -36,5 +36,10 @@ pipenv shell
 python <python_filename.py>
 ```
 
+4. if install package
+```sh
+pipenv install <package_name>
+```
+
 ## Commit rule
 following [conventional commit message](https://www.conventionalcommits.org/en/v1.0.0/).
