@@ -30,7 +30,7 @@ CREATE TABLE `attraction` (
   `attraction_id` CHAR(32) NOT NULL PRIMARY KEY,
   `name` VARCHAR(255) NOT NULL,
   `name_en` VARCHAR(255),
-  `intro` TEXT COMMENT '景點簡介',
+  `intro` VARCHAR(255) COMMENT '景點簡介',
   `googlemap_name` VARCHAR(255) NOT NULL COMMENT 'Google Map上的名稱',
   `googlemap_url` VARCHAR(255) NOT NULLCOMMENT 'Google Map的連結',
   `photo_url` VARCHAR(255) COMMENT 'tripadvisor景點照',
@@ -42,7 +42,7 @@ CREATE TABLE `attraction` (
 
 CREATE TABLE `attraction_detail` (
   `attraction_id` CHAR(32) NOT NULL PRIMARY KEY,
-  `info` TEXT NOT NULL COMMENT '景點詳細介紹',
+  `info` VARCHAR(255) NOT NULL COMMENT '景點詳細介紹',
   FOREIGN KEY (`attraction_id`) REFERENCES `attraction` (`attraction_id`)
 ) COMMENT = '景點詳細資料';
 
