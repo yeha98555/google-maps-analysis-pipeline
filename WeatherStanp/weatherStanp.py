@@ -35,7 +35,7 @@ def main():
     if not os.path.isdir(saveDir):
         os.makedirs(saveDir)
 
-    weather.to_csv('WeatherStanp\weatherStand.csv')
-    weather1.to_csv('WeatherStanp\weatherStand1.csv')
+    weather.to_csv('WeatherStanp\weatherStandODS.csv')
+    weather1.to_csv('WeatherStanp\weatherStandDW.csv')
 
 main()
