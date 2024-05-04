@@ -16,11 +16,13 @@ CREATE TABLE `social_platform` (
 
 CREATE TABLE `weather_station` (
   `id` CHAR(32) NOT NULL PRIMARY KEY,
+  `station_orig_id` VARCHAR(255) NOT NULL COMMENT '氣象站原始ID',
   `name` VARCHAR(255) NOT NULL,
   `name_en` VARCHAR(255) NOT NULL,
   `lat` DECIMAL(8,6) NOT NULL COMMENT '緯度',
   `lon` DECIMAL(9,6) NOT NULL COMMENT '經度',
   `city_id` CHAR(32) NOT NULL,
+  `address` VARCHAR(255) NOT NULL,
   FOREIGN KEY (`city_id`) REFERENCES `city` (`id`)
 ) COMMENT = '氣象站';
 
@@ -96,7 +98,6 @@ CREATE TABLE `attraction_type` (
 ) COMMENT = '景點種類(來自tripadvisor)';
 
 CREATE TABLE `weather_history` (
-  `id` CHAR(32) NOT NULL PRIMARY KEY,
   `station_id` CHAR(32) NOT NULL,
   `temperature_low` INTEGER NOT NULL,
   `temperature_high` INTEGER NOT NULL,
@@ -106,6 +107,7 @@ CREATE TABLE `weather_history` (
   `total_sunshine_hrs` INTEGER NOT NULL COMMENT '總日照時數',
   `year` NOT NULL VARCHAR(255),
   `month` NOT NULLVARCHAR(255),
+  PRIMARY KEY (`station_id`, `year`, `month`),
   FOREIGN KEY (`station_id`) REFERENCES `weather_station` (`id`)
 ) COMMENT = '縣市過去每月雨量和氣溫';
 
