@@ -28,14 +28,21 @@ def main():
         if len(content):
             contents.append(content)
 
-    weather = pd.DataFrame(contents[0:737],columns=[title])
-    weather1 = weather[['站號','站名','經度','緯度','城市','地址']]
+    index = []
+    for i in range(1,738):
+        index.append(i)
+    print(index)
 
+
+    weather = pd.DataFrame(contents[0:737],columns=[title], index=[index])
+    print(weather)
+    weather1 = weather[['站號','站名','經度','緯度','城市','地址']]
+    print(weather1)
     saveDir = "WeatherStanp"
     if not os.path.isdir(saveDir):
         os.makedirs(saveDir)
 
-    weather.to_csv('WeatherStanp\weatherStand.csv')
-    weather1.to_csv('WeatherStanp\weatherStand1.csv')
+    weather.to_csv('WeatherStanp\weatherStandODS.csv')
+    weather1.to_csv('WeatherStanp\weatherStandDW.csv')
 
 main()
