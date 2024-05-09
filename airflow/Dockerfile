@@ -5,4 +5,4 @@ COPY gcp_keyfile.json .
 
 ENV GOOGLE_APPLICATION_CREDENTIALS = "/opt/airflow/gcp_keyfile.json"
 
-RUN pip install requirements.txt
+RUN pip install -r requirements.txt
