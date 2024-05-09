@@ -33,6 +33,9 @@ resource "google_storage_bucket" "etl_raw" {
     enabled = true
   }
   force_destroy = true
+  labels = {
+    "env" = "${terraform.workspace}"
+  }
 }
 
 resource "google_storage_bucket" "etl_processed" {
@@ -45,6 +48,9 @@ resource "google_storage_bucket" "etl_processed" {
     enabled = true
   }
   force_destroy = true
+  labels = {
+    "env" = "${terraform.workspace}"
+  }
 }
 
 resource "google_storage_bucket" "etl_archive" {
@@ -65,6 +71,9 @@ resource "google_storage_bucket" "etl_archive" {
     }
   }
   force_destroy = true
+  labels = {
+    "env" = "${terraform.workspace}"
+  }
 }
 
 # BigQuery Datasets for ETL
