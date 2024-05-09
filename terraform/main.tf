@@ -104,6 +104,12 @@ resource "google_project_iam_member" "airflow_gcs_creator" {
   member  = "serviceAccount:${google_service_account.airflow.email}"
 }
 
+resource "google_project_iam_member" "airflow_gcs_admin" {
+  project = var.project_id
+  role    = "roles/storage.objectAdmin"
+  member  = "serviceAccount:${google_service_account.airflow.email}"
+}
+
 resource "google_project_iam_member" "airflow_bq_viewer" {
   project = var.project_id
   role    = "roles/bigquery.dataViewer"
