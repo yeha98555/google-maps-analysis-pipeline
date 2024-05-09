@@ -56,7 +56,7 @@ resource "google_storage_bucket" "etl_processed" {
 resource "google_storage_bucket" "etl_archive" {
   name                        = "${var.project_id}-etl-archive-${terraform.workspace}"
   location                    = var.region
-  storage_class               = var.storage_class
+  storage_class               = "ARCHIVE"
   uniform_bucket_level_access = true
   labels                      = local.common_tags
   versioning {
