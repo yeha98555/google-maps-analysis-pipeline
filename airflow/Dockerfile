@@ -1,4 +1,4 @@
-from apache/airflow:2.9.1
+FROM apache/airflow:2.9.1
 
 COPY requirements.txt .
 COPY gcp_keyfile.json .
