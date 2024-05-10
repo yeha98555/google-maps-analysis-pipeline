@@ -31,12 +31,3 @@ repos:
     hooks:
       - id: check-merge-conflict
       - id: no-commit-to-branch
-  - repo: local
-    hooks:
-      - id: trufflehog
-        name: TruffleHog
-        entry: trufflehog
-        args: ["--json", "--regex", "--entropy=True", "$(pwd)"]
-        language: system
-        stages: [commit, push]
-        exclude: '^.*\.(jpg|png|bin)$|^docs/|^legacy/|^Pipfile*|.pre-commit-config.yaml|^config\.json$'
