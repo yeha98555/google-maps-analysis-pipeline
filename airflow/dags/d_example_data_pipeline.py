@@ -33,13 +33,14 @@ default_args = {
 
 
 @dag(
+    dag_id="d_example_data_pipeline",
     default_args=default_args,
     schedule_interval="@daily",
     start_date=days_ago(1),
     catchup=False,
     tags=["example"],
 )
-def data_query_dag():
+def d_example_data_pipeline():
     @task
     def download_data():
         return download_df_from_gcs(bucket_name=RAW_BUCKET, blob_name=BLOB_NAME)
@@ -201,4 +202,4 @@ def data_query_dag():
     upload_to_bigquery_task.set_upstream(join_data_task)
 
 
-data_query_dag()
+d_example_data_pipeline()

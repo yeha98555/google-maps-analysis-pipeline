@@ -22,7 +22,7 @@ docker-compose up
 
 1. [data_ingestion_gcs_dag.py](./dags/data_ingestion_gcs_dag.py): upload file to GCS, and create bigquery external table.
 
-2. [data_query_dag.py](./dags/data_query_dag.py): simple data pipeline.
+2. [d_example_data_pipeline.py](./dags/d_example_data_pipeline.py): simple data pipeline.
 - download data from gcs, and transform data, then upload to gcs and create external table.
 - query bigquery and create new table.
 
