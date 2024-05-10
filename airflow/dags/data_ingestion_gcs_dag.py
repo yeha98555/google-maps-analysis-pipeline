@@ -33,7 +33,7 @@ with DAG(
         python_callable=upload_file_to_gcs,
         op_kwargs={
             "bucket_name": BUCKET,
-            "blob_name": f"{TARGET_FILE}",
+            "blob_name": f"yellow_taxi/{TARGET_FILE}",
             "source_filepath": OUTPUT_FILE_TEMPLATE,
         },
     )
@@ -45,7 +45,7 @@ with DAG(
             "dataset_name": BIGQUERY_DATASET,
             "table_name": TARGET_FILE.replace(".parquet", ""),
             "bucket_name": BUCKET,
-            "blob_name": f"{TARGET_FILE}",
+            "blob_name": f"yellow_taxi/{TARGET_FILE}",
         },
     )
 
