@@ -2,4 +2,4 @@
 logs/
 plugins/
 .env
-gcp_keyfile.json
+*_key*.json
