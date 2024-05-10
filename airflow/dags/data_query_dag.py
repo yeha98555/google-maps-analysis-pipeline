@@ -1,9 +1,13 @@
 import os
 
 import pandas as pd
+from google.cloud import bigquery
 from utils.gcp import (
     build_bq_from_gcs,
     download_df_from_gcs,
+    query_bq,
+    query_bq_to_df,
+    upload_df_to_bq,
     upload_df_to_gcs,
 )
 
@@ -30,6 +34,52 @@ default_args = {
 
 
 def transform_data(df: pd.DataFrame) -> pd.DataFrame:
+    # 使用python做一些轉換
+    df.drop_duplicates(inplace=True)
+    df.dropna(inplace=True)
+    df.drop(
+        columns=[
+            "airport_fee",
+            "congestion_surcharge",
+            "improvement_surcharge",
+            "extra",
+            "mta_tax",
+            "store_and_fwd_flag",
+        ],
+        inplace=True,
+    )
+    df.reset_index(drop=True, inplace=True)
+    return df[df["fare_amount"] < 10]
+
+
+def lookup_data(dataset_name, table_name):
+    client = bigquery.Client()
+    query = f"""
+    SELECT *
+    FROM `{dataset_name}.{table_name}` WHERE fare_amount = 1
+    """
+    results = query_bq(client, query)
+    for row in results:
+        print(row)
+
+
+def join_data(dataset_name: str) -> pd.DataFrame:
+    table1_name = TABLE_NAME
+    table2_name = (
+        TABLE_NAME,
+    )  # 這裡使用相同的資料表名稱, 只是示範，應該是要兩個不同的資料表名稱
+    common_column = "VendorID"
+
+    client = bigquery.Client()
+
+    query = f"""
+    SELECT t1.tpep_pickup_datetime, t1.trip_distance, t1.fare_amount,
+    FROM `{dataset_name}.{table1_name}` AS t1
+    INNER JOIN `{dataset_name}.{table2_name}` AS t2
+    ON t1.{common_column} = t2.{common_column}
+    WHERE t1.fare_amount = 1
+    """
+    df = query_bq_to_df(client, query)
     return df
 
 
@@ -77,6 +127,33 @@ with dag:
         },
     )
 
+    lookup_bq_table_task = PythonOperator(
+        task_id="lookup_bq_table_task",
+        python_callable=lookup_data,
+        op_kwargs={
+            "dataset_name": BQ_ODS_DATASET,
+            "table_name": TABLE_NAME,
+        },
+    )
+
+    join_data_task = PythonOperator(
+        task_id="join_data_task",
+        python_callable=join_data,
+        op_kwargs={
+            "dataset_name": BQ_ODS_DATASET,
+        },
+    )
+
+    upload_to_bigquery_task = PythonOperator(
+        task_id="upload_to_bigquery_task",
+        python_callable=upload_df_to_bq,
+        op_kwargs={
+            "dataset_name": BQ_DIM_DATASET,
+            "table_name": TABLE_NAME,
+            "df": join_data_task.output,
+        },
+    )
+
     # 從GCS下載成pd.DataFrame，使用pandas做一些資料處理，再次上傳到GCS，最後建立BigQuery的Exteral Table
     (
         download_data_task
@@ -84,3 +161,9 @@ with dag:
         >> upload_transformed_data_task
         >> create_bq_external_table_task
     )
+
+    # 查詢BigQuery的Exteral Table
+    create_bq_external_table_task >> lookup_bq_table_task
+
+    # 對兩個BigQuery的Exteral Table做join，最後上傳到BigQuery
+    create_bq_external_table_task >> join_data_task >> upload_to_bigquery_task
