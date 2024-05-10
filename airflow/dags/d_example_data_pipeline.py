@@ -165,16 +165,20 @@ def d_example_data_pipeline():
         return query_bq_to_df(query)
 
     @task
-    def l_upload_joined_data_to_bq(df: pd.DataFrame):
+    def l_upload_joined_data_to_bq(
+        df: pd.DataFrame, dataset_name: str, table_name: str
+    ):
         """
         Upload data to bigquery.
 
         Args:
             df (pd.DataFrame): dataframe.
+            dataset_name (str): dataset name.
+            table_name (str): table name.
         """
         upload_df_to_bq(
-            dataset_name=BQ_DIM_DATASET,
-            table_name=TABLE_NAME,
+            dataset_name=dataset_name,
+            table_name=table_name,
             df=df,
             schema=[
                 bigquery.SchemaField("tpep_pickup_datetime", "TIMESTAMP"),
@@ -196,7 +200,9 @@ def d_example_data_pipeline():
     lookup_data_task = t_lookup_data(BQ_ODS_DATASET, TABLE_NAME)
     # 對兩個BigQuery的Exteral Table做join，最後上傳到BigQuery
     join_data_task = t_join_data()
-    upload_to_bigquery_task = l_upload_joined_data_to_bq(join_data_task)
+    upload_to_bigquery_task = l_upload_joined_data_to_bq(
+        join_data_task, BQ_DIM_DATASET, "dim_taxi"
+    )
 
     # Set dependencies
     create_bq_external_table_task.set_upstream(upload_transformed_data_task)
