@@ -1,7 +1,6 @@
 import os
 
 import pandas as pd
-from google.cloud import bigquery
 from utils.gcp import (
     build_bq_from_gcs,
     download_df_from_gcs,
@@ -69,12 +68,11 @@ def lookup_data(dataset_name, table_name):
         dataset_name (str): dataset name.
         table_name (str): table name.
     """
-    client = bigquery.Client()
     query = f"""
     SELECT *
     FROM `{dataset_name}.{table_name}` WHERE fare_amount = 1
     """
-    results = query_bq(client, query)
+    results = query_bq(query)
     for row in results:
         print(row)
 
@@ -94,8 +92,6 @@ def join_data(dataset_name: str) -> pd.DataFrame:
     table2_name = TABLE_NAME
     common_column = "VendorID"
 
-    client = bigquery.Client()
-
     query = f"""
     SELECT t1.tpep_pickup_datetime, t1.trip_distance, t1.fare_amount,
     FROM `{dataset_name}.{table1_name}` AS t1
@@ -103,7 +99,7 @@ def join_data(dataset_name: str) -> pd.DataFrame:
     ON t1.{common_column} = t2.{common_column}
     WHERE t1.fare_amount = 1
     """
-    df = query_bq_to_df(client, query)
+    df = query_bq_to_df(query)
     return df
 
 

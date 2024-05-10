@@ -131,17 +131,18 @@ def build_bq_from_gcs(
         raise Exception(f"An error occurred while checking if the table exists: {e}")
 
 
-def query_bq(client: bigquery.Client, sql_query: str) -> bigquery.QueryJob:
+def query_bq(sql_query: str) -> bigquery.QueryJob:
     """
     Query bigquery and return results. (可以用在bigquery指令，例如Insert、Update，但沒有要取得資料表的資料)
 
     Args:
-        client (bigquery.Client): The BigQuery client.
         sql_query (str): The SQL query to execute.
 
     Returns:
         bigquery.QueryJob: The result of the query.
     """
+    client = bigquery.Client()
+
     try:
         query_job = client.query(sql_query)
         return query_job.result()  # Return the results for further processing
@@ -149,18 +150,19 @@ def query_bq(client: bigquery.Client, sql_query: str) -> bigquery.QueryJob:
         raise Exception(f"Failed to query bigquery table, reason: {e}")
 
 
-def query_bq_to_df(client: bigquery.Client, sql_query: str) -> pd.DataFrame():
+def query_bq_to_df(sql_query: str) -> pd.DataFrame():
     """
     Executes a BigQuery SQL query and directly loads the results into a DataFrame
     using the BigQuery Storage API.  (可以用在bigquery指令，然後取得資料表的資料成為DataFrame)
 
     Args:
-        client (bigquery.Client): The BigQuery client.
         query (str): SQL query string.
 
     Returns:
         pd.DataFrame: The query results as a Pandas DataFrame.
     """
+    client = bigquery.Client()
+
     df = pd.read_gbq(
         sql_query, project_id=client.project, dialect="standard", use_bqstorage_api=True
     )
