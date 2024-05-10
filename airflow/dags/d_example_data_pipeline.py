@@ -1,4 +1,5 @@
 import os
+from datetime import timedelta
 
 import pandas as pd
 from google.cloud import bigquery
@@ -29,6 +30,7 @@ default_args = {
     "email_on_failure": False,
     "email_on_retry": False,
     "retries": 1,
+    "retry_delay": timedelta(minutes=5),
 }
 
 
