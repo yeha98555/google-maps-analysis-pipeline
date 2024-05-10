@@ -155,10 +155,12 @@ def d_example_data_pipeline():
             pd.DataFrame: joined dataframe.
         """
         # 這裡使用兩個相同的資料表名稱, 只是示範，應該是要兩個不同的資料表名稱操作才有意義
+        dataset1 = dataset2 = BQ_ODS_DATASET
+        table_name1 = table_name2 = f"ods_{TABLE_NAME}"
         query = f"""
         SELECT t1.tpep_pickup_datetime, t1.trip_distance, t1.fare_amount
-        FROM `{BQ_ODS_DATASET}.{TABLE_NAME}` AS t1
-        INNER JOIN `{BQ_ODS_DATASET}.{TABLE_NAME}` AS t2
+        FROM `{dataset1}.{table_name1}` AS t1
+        INNER JOIN `{dataset2}.{table_name2}` AS t2
         ON t1.VendorID = t2.VendorID
         WHERE t1.fare_amount = 1
         """
@@ -194,10 +196,10 @@ def d_example_data_pipeline():
         transformed_data, PROCESSED_BUCKET, f"{TABLE_NAME}_processed"
     )
     create_bq_external_table_task = l_create_bq_external_table(
-        PROCESSED_BUCKET, f"{TABLE_NAME}_processed", BQ_ODS_DATASET, TABLE_NAME
+        PROCESSED_BUCKET, f"{TABLE_NAME}_processed", BQ_ODS_DATASET, f"ods_{TABLE_NAME}"
     )
     # 查詢BigQuery的Exteral Table
-    lookup_data_task = t_lookup_data(BQ_ODS_DATASET, TABLE_NAME)
+    lookup_data_task = t_lookup_data(BQ_ODS_DATASET, f"ods_{TABLE_NAME}")
     # 對兩個BigQuery的Exteral Table做join，最後上傳到BigQuery
     join_data_task = t_join_data()
     upload_to_bigquery_task = l_upload_joined_data_to_bq(
