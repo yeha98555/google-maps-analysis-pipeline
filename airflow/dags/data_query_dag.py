@@ -89,10 +89,9 @@ def join_data(dataset_name: str) -> pd.DataFrame:
     Returns:
         pd.DataFrame: joined dataframe.
     """
+    # 這裡使用兩個相同的資料表名稱, 只是示範，應該是要兩個不同的資料表名稱操作才有意義
     table1_name = TABLE_NAME
-    table2_name = (
-        TABLE_NAME,
-    )  # 這裡使用相同的資料表名稱, 只是示範，應該是要兩個不同的資料表名稱
+    table2_name = TABLE_NAME
     common_column = "VendorID"
 
     client = bigquery.Client()
