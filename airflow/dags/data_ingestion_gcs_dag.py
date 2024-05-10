@@ -22,6 +22,7 @@ with DAG(
     dag_id="data_ingestion_gcs_dag",
     schedule_interval="0 6 2 * *",
     start_date=datetime(2023, 1, 1),
+    tags=["example"],
 ) as dag:
     download_dataset_task = BashOperator(
         task_id="download_dataset_task",
