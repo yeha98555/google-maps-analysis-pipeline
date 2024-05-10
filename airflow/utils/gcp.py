@@ -129,3 +129,71 @@ def build_bq_from_gcs(
             raise Exception(f"Failed to create external table, reason: {e}")
     except Exception as e:
         raise Exception(f"An error occurred while checking if the table exists: {e}")
+
+
+def query_bq(client: bigquery.Client, sql_query: str) -> bigquery.QueryJob:
+    """
+    Query bigquery and return results. (可以用在bigquery指令，例如Insert、Update，但沒有要取得資料表的資料)
+
+    Args:
+        client (bigquery.Client): The BigQuery client.
+        sql_query (str): The SQL query to execute.
+
+    Returns:
+        bigquery.QueryJob: The result of the query.
+    """
+    try:
+        query_job = client.query(sql_query)
+        return query_job.result()  # Return the results for further processing
+    except Exception as e:
+        raise Exception(f"Failed to query bigquery table, reason: {e}")
+
+
+def query_bq_to_df(client: bigquery.Client, sql_query: str) -> pd.DataFrame():
+    """
+    Executes a BigQuery SQL query and directly loads the results into a DataFrame
+    using the BigQuery Storage API.  (可以用在bigquery指令，然後取得資料表的資料成為DataFrame)
+
+    Args:
+        client (bigquery.Client): The BigQuery client.
+        query (str): SQL query string.
+
+    Returns:
+        pd.DataFrame: The query results as a Pandas DataFrame.
+    """
+    df = pd.read_gbq(
+        sql_query, project_id=client.project, dialect="standard", use_bqstorage_api=True
+    )
+    return df
+
+
+def upload_df_to_bq(df: pd.DataFrame, dataset_name: str, table_name: str) -> bool:
+    """
+    Upload a pandas dataframe to bigquery
+
+    Args:
+        df (pd.DataFrame): The dataframe to upload
+        dataset_name (str): The name of the dataset to upload to
+        table_name (str): The name of the table to upload to
+
+    Returns:
+        bool: True if the upload was successful, False otherwise
+    """
+    client = bigquery.Client()
+
+    dataset_id = client.dataset(dataset_name)
+    table_id = dataset_id.table(table_name)
+
+    job_config = bigquery.LoadJobConfig(
+        source_format=bigquery.SourceFormat.PARQUET,
+        write_disposition=bigquery.WriteDisposition.WRITE_TRUNCATE,
+    )
+
+    try:
+        job = client.load_table_from_dataframe(df, table_id, job_config=job_config)
+        job.result()  # Wait for the job to complete
+        table = client.get_table(table_id)
+        print(f"Table {table.table_id} created with {table.num_rows} rows.")
+        return True
+    except Exception as e:
+        raise Exception(f"Failed to upload df to bigquery, reason: {e}")
