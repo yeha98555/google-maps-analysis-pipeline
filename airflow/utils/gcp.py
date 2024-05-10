@@ -14,15 +14,15 @@ storage.blob._DEFAULT_CHUNKSIZE = 1024 * 1024  # 1 MB
 
 def upload_df_to_gcs(bucket_name: str, blob_name: str, df: pd.DataFrame) -> bool:
     """
-    Upload a pandas dataframe to GCS
+    Upload a pandas dataframe to GCS.
 
     Args:
-        bucket_name (str): The name of the bucket to upload to
-        blob_name (str): The name of the blob to upload to
-        df (pd.DataFrame): The dataframe to upload
+        bucket_name (str): The name of the bucket to upload to.
+        blob_name (str): The name of the blob to upload to.
+        df (pd.DataFrame): The dataframe to upload.
 
     Returns:
-        bool: True if the upload was successful, False otherwise
+        bool: True if the upload was successful, False otherwise.
     """
     client = storage.Client()
     bucket = client.bucket(bucket_name)
@@ -43,15 +43,15 @@ def upload_df_to_gcs(bucket_name: str, blob_name: str, df: pd.DataFrame) -> bool
 
 def upload_file_to_gcs(bucket_name: str, blob_name: str, source_filepath: str) -> bool:
     """
-    Upload a file to GCS
+    Upload a file to GCS.
 
     Args:
-        bucket_name (str): The name of the bucket to upload to
-        blob_name (str): The name of the blob to upload to
-        source_filepath (str): The path to the file to upload
+        bucket_name (str): The name of the bucket to upload to.
+        blob_name (str): The name of the blob to upload to.
+        source_filepath (str): The path to the file to upload.
 
     Returns:
-        bool: True if the upload was successful, False otherwise
+        bool: True if the upload was successful, False otherwise.
     """
     client = storage.Client()
     bucket = client.bucket(bucket_name)
@@ -70,14 +70,14 @@ def upload_file_to_gcs(bucket_name: str, blob_name: str, source_filepath: str) -
 
 def download_df_from_gcs(bucket_name: str, blob_name: str) -> pd.DataFrame:
     """
-    Download a pandas dataframe from GCS
+    Download a pandas dataframe from GCS.
 
     Args:
-        bucket_name (str): The name of the bucket to download from
-        blob_name (str): The name of the blob to download from
+        bucket_name (str): The name of the bucket to download from.
+        blob_name (str): The name of the blob to download from.
 
     Returns:
-        pd.DataFrame: The dataframe downloaded from GCS
+        pd.DataFrame: The dataframe downloaded from GCS.
     """
     client = storage.Client()
     bucket = client.bucket(bucket_name)
@@ -185,7 +185,7 @@ def upload_df_to_bq(
     schema: List[bigquery.SchemaField] = None,
 ) -> bool:
     """
-    Upload a pandas dataframe to bigquery
+    Upload a pandas dataframe to bigquery.
 
     Args:
         df (pd.DataFrame): The dataframe to upload.

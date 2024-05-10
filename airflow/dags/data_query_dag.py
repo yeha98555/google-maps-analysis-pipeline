@@ -35,7 +35,7 @@ default_args = {
 
 def transform_data(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Transform data (drop duplicates, drop na, drop columns)
+    Transform data (drop duplicates, drop na, drop columns).
 
     Args:
         df (pd.DataFrame): input dataframe.
