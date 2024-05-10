@@ -1,6 +1,7 @@
 import os
 
 import pandas as pd
+from google.cloud import bigquery
 from utils.gcp import (
     build_bq_from_gcs,
     download_df_from_gcs,
@@ -171,6 +172,11 @@ with dag:
             "dataset_name": BQ_DIM_DATASET,
             "table_name": TABLE_NAME,
             "df": join_data_task.output,
+            "schema": [
+                bigquery.SchemaField("tpep_pickup_datetime", "TIMESTAMP"),
+                bigquery.SchemaField("trip_distance", "FLOAT"),
+                bigquery.SchemaField("fare_amount", "FLOAT"),
+            ],
         },
     )
 

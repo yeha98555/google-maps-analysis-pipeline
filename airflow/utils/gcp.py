@@ -169,17 +169,21 @@ def query_bq_to_df(sql_query: str) -> pd.DataFrame():
     return df
 
 
-def upload_df_to_bq(df: pd.DataFrame, dataset_name: str, table_name: str) -> bool:
+def upload_df_to_bq(
+    df: pd.DataFrame, dataset_name: str, table_name: str, schema=None
+) -> bool:
     """
     Upload a pandas dataframe to bigquery
 
     Args:
-        df (pd.DataFrame): The dataframe to upload
-        dataset_name (str): The name of the dataset to upload to
-        table_name (str): The name of the table to upload to
+        df (pd.DataFrame): The dataframe to upload.
+        dataset_name (str): The name of the dataset to upload to.
+        table_name (str): The name of the table to upload to.
+        schema (str, optional): The schema of the table to upload to. Default is None.
+                                If None, use the default schema (automatic-detect).
 
     Returns:
-        bool: True if the upload was successful, False otherwise
+        bool: True if the upload was successful, False otherwise.
     """
     client = bigquery.Client()
 
@@ -190,6 +194,8 @@ def upload_df_to_bq(df: pd.DataFrame, dataset_name: str, table_name: str) -> boo
         source_format=bigquery.SourceFormat.PARQUET,
         write_disposition=bigquery.WriteDisposition.WRITE_TRUNCATE,
     )
+    if schema:
+        job_config.schema = schema
 
     try:
         job = client.load_table_from_dataframe(df, table_id, job_config=job_config)
