@@ -1,4 +1,5 @@
 from google.cloud import bigquery, storage
+from google.cloud.exceptions import NotFound
 
 # WORKAROUND to prevent timeout for files > 6 MB on 800 kbps upload speed.
 # (Ref: https://github.com/googleapis/python-storage/issues/74)
@@ -51,22 +52,26 @@ def build_bq_from_gcs(
     """
     client = bigquery.Client()
 
-    # bigquery
-    dataset_id = client.dataset(dataset_name)
-    table_id = dataset_id.table(table_name)
-    # gcs
-    source_uri = f"gs://{bucket_name}/{blob_name}"
-
-    job_config = bigquery.LoadJobConfig(
-        source_format=bigquery.SourceFormat.PARQUET,
-        write_disposition=bigquery.WriteDisposition.WRITE_TRUNCATE,
-    )
+    # Construct the fully-qualified BigQuery table ID
+    table_id = f"{client.project}.{dataset_name}.{table_name}"
 
     try:
-        job = client.load_table_from_uri(source_uri, table_id, job_config=job_config)
-        job.result()  # Wait for the job to complete
-        table = client.get_table(table_id)
-        print(f"Table {table.table_id} created with {table.num_rows} rows.")
-        return True
+        client.get_table(table_id)  # Attempt to get the table
+        print(f"Table {table_id} already exists.")
+        return False
+    except NotFound:
+        # Define the external data source configuration
+        external_config = bigquery.ExternalConfig("PARQUET")
+        external_config.source_uris = [f"gs://{bucket_name}/{blob_name}"]
+        # Create a table with the external data source configuration
+        table = bigquery.Table(table_id)
+        table.external_data_configuration = external_config
+
+        try:
+            client.create_table(table)  # API request to create the external table
+            print(f"External table {table.table_id} created.")
+            return True
+        except Exception as e:
+            raise Exception(f"Failed to create external table, reason: {e}")
     except Exception as e:
-        raise Exception(f"Failed to build bigquery external table, reason: {e}")
+        raise Exception(f"An error occurred while checking if the table exists: {e}")
