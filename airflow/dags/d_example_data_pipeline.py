@@ -45,11 +45,11 @@ default_args = {
 )
 def d_example_data_pipeline():
     @task
-    def download_data():
+    def e_download_data_from_gcs():
         return download_df_from_gcs(bucket_name=RAW_BUCKET, blob_name=BLOB_NAME)
 
     @task
-    def transform_data(df: pd.DataFrame) -> pd.DataFrame:
+    def t_data_clean(df: pd.DataFrame) -> pd.DataFrame:
         """
         Transform data (drop duplicates, drop na, drop columns).
 
@@ -77,7 +77,7 @@ def d_example_data_pipeline():
         return df[df["fare_amount"] < 10]
 
     @task
-    def upload_transformed_data(df: pd.DataFrame, bucket_name, blob_name):
+    def l_upload_transformed_data_to_gcs(df: pd.DataFrame, bucket_name, blob_name):
         """
         Upload transformed data to GCS.
 
@@ -89,7 +89,7 @@ def d_example_data_pipeline():
         upload_df_to_gcs(bucket_name=bucket_name, blob_name=blob_name, df=df)
 
     @task
-    def create_bq_external_table(
+    def l_create_bq_external_table(
         bucket_name: str, blob_name: str, dataset_name: str, table_name: str
     ):
         """
@@ -130,7 +130,7 @@ def d_example_data_pipeline():
         )
 
     @task
-    def lookup_data(dataset_name: str, table_name: str):
+    def t_lookup_data(dataset_name: str, table_name: str):
         """
         Lookup data from bigquery.
 
@@ -144,7 +144,7 @@ def d_example_data_pipeline():
             print(row)
 
     @task
-    def join_data() -> pd.DataFrame:
+    def t_join_data() -> pd.DataFrame:
         """
         Join data from bigquery.
 
@@ -165,7 +165,7 @@ def d_example_data_pipeline():
         return query_bq_to_df(query)
 
     @task
-    def upload_to_bigquery(df: pd.DataFrame):
+    def l_upload_joined_data_to_bq(df: pd.DataFrame):
         """
         Upload data to bigquery.
 
@@ -184,19 +184,19 @@ def d_example_data_pipeline():
         )
 
     # 從GCS下載成pd.DataFrame，使用pandas做一些資料處理，再次上傳到GCS，最後建立BigQuery的Exteral Table
-    data = download_data()
-    transformed_data = transform_data(data)
-    upload_transformed_data_task = upload_transformed_data(
+    data = e_download_data_from_gcs()
+    transformed_data = t_data_clean(data)
+    upload_transformed_data_task = l_upload_transformed_data_to_gcs(
         transformed_data, PROCESSED_BUCKET, f"{TABLE_NAME}_processed"
     )
-    create_bq_external_table_task = create_bq_external_table(
+    create_bq_external_table_task = l_create_bq_external_table(
         PROCESSED_BUCKET, f"{TABLE_NAME}_processed", BQ_ODS_DATASET, TABLE_NAME
     )
     # 查詢BigQuery的Exteral Table
-    lookup_data_task = lookup_data(BQ_ODS_DATASET, TABLE_NAME)
+    lookup_data_task = t_lookup_data(BQ_ODS_DATASET, TABLE_NAME)
     # 對兩個BigQuery的Exteral Table做join，最後上傳到BigQuery
-    join_data_task = join_data()
-    upload_to_bigquery_task = upload_to_bigquery(join_data_task)
+    join_data_task = t_join_data()
+    upload_to_bigquery_task = l_upload_joined_data_to_bq(join_data_task)
 
     # Set dependencies
     create_bq_external_table_task.set_upstream(upload_transformed_data_task)
