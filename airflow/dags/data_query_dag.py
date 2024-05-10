@@ -145,6 +145,27 @@ with dag:
             "table_name": TABLE_NAME,
             "bucket_name": PROCESSED_BUCKET,
             "blob_name": f"{TABLE_NAME}_processed",
+            "schema": [
+                bigquery.SchemaField(
+                    "VendorID", "INTEGER", mode="REQUIRED"
+                ),  # NOT NULL
+                bigquery.SchemaField(
+                    "tpep_pickup_datetime", "TIMESTAMP", mode="NULLABLE"
+                ),
+                bigquery.SchemaField(
+                    "tpep_dropoff_datetime", "TIMESTAMP", mode="NULLABLE"
+                ),
+                bigquery.SchemaField("passenger_count", "FLOAT", mode="NULLABLE"),
+                bigquery.SchemaField("trip_distance", "FLOAT", mode="NULLABLE"),
+                bigquery.SchemaField("RatecodeID", "FLOAT", mode="NULLABLE"),
+                bigquery.SchemaField("PULocationID", "INTEGER", mode="NULLABLE"),
+                bigquery.SchemaField("DOLocationID", "INTEGER", mode="NULLABLE"),
+                bigquery.SchemaField("payment_type", "INTEGER", mode="NULLABLE"),
+                bigquery.SchemaField("fare_amount", "FLOAT", mode="NULLABLE"),
+                bigquery.SchemaField("tip_amount", "FLOAT", mode="NULLABLE"),
+                bigquery.SchemaField("tolls_amount", "FLOAT", mode="NULLABLE"),
+                bigquery.SchemaField("total_amount", "FLOAT", mode="NULLABLE"),
+            ],
         },
     )
 

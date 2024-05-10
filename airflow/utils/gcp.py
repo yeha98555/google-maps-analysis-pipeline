@@ -91,19 +91,25 @@ def download_df_from_gcs(bucket_name: str, blob_name: str) -> pd.DataFrame:
 
 
 def build_bq_from_gcs(
-    dataset_name: str, table_name: str, bucket_name: str, blob_name: str
+    dataset_name: str,
+    table_name: str,
+    bucket_name: str,
+    blob_name: str,
+    schema: List[bigquery.SchemaField] = None,
 ) -> bool:
     """
-    Build a bigquery external table from a parquet file in GCS
+    Build a bigquery external table from a parquet file in GCS.
 
     Args:
-        dataset_name (str): The name of the dataset to create
-        table_name (str): The name of the table to create
-        bucket_name (str): The name of the bucket to upload to
-        blob_name (str): The name of the blob to upload to
+        dataset_name (str): The name of the dataset to create.
+        table_name (str): The name of the table to create.
+        bucket_name (str): The name of the bucket to upload to.
+        blob_name (str): The name of the blob to upload to.
+        schema (List[bigquery.SchemaField], optional): The schema of the table to upload to. Default is None.
+                                                        If None, use the default schema (automatic-detect).
 
     Returns:
-        bool: True if the upload was successful, False otherwise
+        bool: True if the upload was successful, False otherwise.
     """
     client = bigquery.Client()
 
@@ -118,6 +124,8 @@ def build_bq_from_gcs(
         # Define the external data source configuration
         external_config = bigquery.ExternalConfig("PARQUET")
         external_config.source_uris = [f"gs://{bucket_name}/{blob_name}"]
+        if schema:
+            external_config.schema = schema
         # Create a table with the external data source configuration
         table = bigquery.Table(table_id)
         table.external_data_configuration = external_config
@@ -184,7 +192,7 @@ def upload_df_to_bq(
         dataset_name (str): The name of the dataset to upload to.
         table_name (str): The name of the table to upload to.
         schema (List[bigquery.SchemaField], optional): The schema of the table to upload to. Default is None.
-                                If None, use the default schema (automatic-detect).
+                                                        If None, use the default schema (automatic-detect).
 
     Returns:
         bool: True if the upload was successful, False otherwise.
