@@ -33,7 +33,7 @@ def upload_df_to_gcs(bucket_name: str, blob_name: str, df: pd.DataFrame) -> bool
         return False
     try:
         blob.upload_from_string(
-            df.to_parquet(), content_type="application/octet-stream"
+            df.to_parquet(index=False), content_type="application/octet-stream"
         )
         print("Upload successful.")
         return True
