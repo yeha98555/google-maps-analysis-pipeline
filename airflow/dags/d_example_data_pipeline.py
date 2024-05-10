@@ -37,6 +37,7 @@ default_args = {
 @dag(
     dag_id="d_example_data_pipeline",
     default_args=default_args,
+    description="An example data pipeline",
     schedule_interval="@daily",
     start_date=days_ago(1),
     catchup=False,
