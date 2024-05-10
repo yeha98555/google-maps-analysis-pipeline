@@ -122,6 +122,17 @@ resource "google_project_iam_member" "airflow_bq_editor" {
   member  = "serviceAccount:${google_service_account.airflow.email}"
 }
 
+resource "google_service_account" "viewer_sa" {
+  account_id   = "viewer-account"
+  display_name = "Viewer Service Account"
+}
+
+resource "google_project_iam_member" "viewer_sa_viewer" {
+  project = var.project_id
+  role    = "roles/viewer"
+  member  = "serviceAccount:${google_service_account.viewer_sa.email}"
+}
+
 output "etl_raw_bucket_url" {
   value = "gs://${google_storage_bucket.etl_raw.name}"
 }
