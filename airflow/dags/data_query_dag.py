@@ -34,6 +34,15 @@ default_args = {
 
 
 def transform_data(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Transform data (drop duplicates, drop na, drop columns)
+
+    Args:
+        df (pd.DataFrame): input dataframe.
+
+    Returns:
+        pd.DataFrame: transformed dataframe.
+    """
     # 使用python做一些轉換
     df.drop_duplicates(inplace=True)
     df.dropna(inplace=True)
@@ -53,6 +62,13 @@ def transform_data(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def lookup_data(dataset_name, table_name):
+    """
+    Lookup data from bigquery.
+
+    Args:
+        dataset_name (str): dataset name.
+        table_name (str): table name.
+    """
     client = bigquery.Client()
     query = f"""
     SELECT *
@@ -64,6 +80,15 @@ def lookup_data(dataset_name, table_name):
 
 
 def join_data(dataset_name: str) -> pd.DataFrame:
+    """
+    Join data from bigquery.
+
+    Args:
+        dataset_name (str): dataset name.
+
+    Returns:
+        pd.DataFrame: joined dataframe.
+    """
     table1_name = TABLE_NAME
     table2_name = (
         TABLE_NAME,
