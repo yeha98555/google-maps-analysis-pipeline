@@ -7,8 +7,8 @@ from airflow import DAG
 from airflow.operators.bash import BashOperator
 from airflow.operators.python import PythonOperator
 
-BUCKET = os.environ.get("GCP_GCS_BUCKET")
-BIGQUERY_DATASET = os.environ.get("BIGQUERY_DATASET", "trips_data_all")
+BUCKET = os.environ.get("GCP_GCS_RAW_BUCKET")
+BIGQUERY_DATASET = os.environ.get("BIGQUERY_SRC_DATASET", "trips_data_all")
 AIRFLOW_HOME = os.environ.get("AIRFLOW_HOME", "/opt/airflow/")
 
 URL_PREFIX = "https://d37ci6vzurychx.cloudfront.net/trip-data"
@@ -33,7 +33,7 @@ with DAG(
         python_callable=upload_file_to_gcs,
         op_kwargs={
             "bucket_name": BUCKET,
-            "blob_name": f"raw/{TARGET_FILE}",
+            "blob_name": f"{TARGET_FILE}",
             "source_filepath": OUTPUT_FILE_TEMPLATE,
         },
     )
@@ -43,9 +43,9 @@ with DAG(
         python_callable=build_bq_from_gcs,
         op_kwargs={
             "dataset_name": BIGQUERY_DATASET,
-            "table_name": "external_table",
+            "table_name": TARGET_FILE.replace(".parquet", ""),
             "bucket_name": BUCKET,
-            "blob_name": f"raw/{TARGET_FILE}",
+            "blob_name": f"{TARGET_FILE}",
         },
     )
 
