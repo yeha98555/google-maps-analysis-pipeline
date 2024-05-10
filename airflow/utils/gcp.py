@@ -1,4 +1,5 @@
 from io import BytesIO
+from typing import List
 
 import pandas as pd
 from google.cloud import bigquery, storage
@@ -170,7 +171,10 @@ def query_bq_to_df(sql_query: str) -> pd.DataFrame():
 
 
 def upload_df_to_bq(
-    df: pd.DataFrame, dataset_name: str, table_name: str, schema=None
+    df: pd.DataFrame,
+    dataset_name: str,
+    table_name: str,
+    schema: List[bigquery.SchemaField] = None,
 ) -> bool:
     """
     Upload a pandas dataframe to bigquery
@@ -179,7 +183,7 @@ def upload_df_to_bq(
         df (pd.DataFrame): The dataframe to upload.
         dataset_name (str): The name of the dataset to upload to.
         table_name (str): The name of the table to upload to.
-        schema (str, optional): The schema of the table to upload to. Default is None.
+        schema (List[bigquery.SchemaField], optional): The schema of the table to upload to. Default is None.
                                 If None, use the default schema (automatic-detect).
 
     Returns:
