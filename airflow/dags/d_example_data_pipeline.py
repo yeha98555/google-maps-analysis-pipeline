@@ -138,6 +138,7 @@ def d_example_data_pipeline():
             dataset_name (str): dataset name.
             table_name (str): table name.
         """
+        # 通常應該不會用來查詢，只是簡單示範可以執行sql，可能可以替換成Insert、Update之類的，沒有要取得回傳值成pd.DataFrame的
         query = f"SELECT * FROM `{dataset_name}.{table_name}` WHERE fare_amount = 1"
         results = query_bq(query)
         for row in results:
