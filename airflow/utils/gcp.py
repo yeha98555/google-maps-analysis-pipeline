@@ -12,11 +12,14 @@ storage.blob._DEFAULT_CHUNKSIZE = 1024 * 1024  # 1 MB
 # End of Workaround
 
 
-def upload_df_to_gcs(bucket_name: str, blob_name: str, df: pd.DataFrame) -> bool:
+def upload_df_to_gcs(
+    client: storage.Client, bucket_name: str, blob_name: str, df: pd.DataFrame
+) -> bool:
     """
     Upload a pandas dataframe to GCS.
 
     Args:
+        client (storage.Client): The client to use to upload to GCS.
         bucket_name (str): The name of the bucket to upload to.
         blob_name (str): The name of the blob to upload to.
         df (pd.DataFrame): The dataframe to upload.
@@ -24,7 +27,6 @@ def upload_df_to_gcs(bucket_name: str, blob_name: str, df: pd.DataFrame) -> bool
     Returns:
         bool: True if the upload was successful, False otherwise.
     """
-    client = storage.Client()
     bucket = client.bucket(bucket_name)
 
     blob = bucket.blob(blob_name)
@@ -41,11 +43,14 @@ def upload_df_to_gcs(bucket_name: str, blob_name: str, df: pd.DataFrame) -> bool
         raise Exception(f"Failed to upload pd.DataFrame to GCS, reason: {e}")
 
 
-def upload_file_to_gcs(bucket_name: str, blob_name: str, source_filepath: str) -> bool:
+def upload_file_to_gcs(
+    client: storage.Client, bucket_name: str, blob_name: str, source_filepath: str
+) -> bool:
     """
     Upload a file to GCS.
 
     Args:
+        client (storage.Client): The client to use to upload to GCS.
         bucket_name (str): The name of the bucket to upload to.
         blob_name (str): The name of the blob to upload to.
         source_filepath (str): The path to the file to upload.
@@ -53,7 +58,6 @@ def upload_file_to_gcs(bucket_name: str, blob_name: str, source_filepath: str) -
     Returns:
         bool: True if the upload was successful, False otherwise.
     """
-    client = storage.Client()
     bucket = client.bucket(bucket_name)
 
     blob = bucket.blob(blob_name)
@@ -68,18 +72,20 @@ def upload_file_to_gcs(bucket_name: str, blob_name: str, source_filepath: str) -
         raise Exception(f"Failed to upload file to GCS, reason: {e}")
 
 
-def download_df_from_gcs(bucket_name: str, blob_name: str) -> pd.DataFrame:
+def download_df_from_gcs(
+    client: storage.Client, bucket_name: str, blob_name: str
+) -> pd.DataFrame:
     """
     Download a pandas dataframe from GCS.
 
     Args:
+        client (storage.Client): The client to use to download from GCS.
         bucket_name (str): The name of the bucket to download from.
         blob_name (str): The name of the blob to download from.
 
     Returns:
         pd.DataFrame: The dataframe downloaded from GCS.
     """
-    client = storage.Client()
     bucket = client.bucket(bucket_name)
 
     blob = bucket.blob(blob_name)
@@ -91,6 +97,7 @@ def download_df_from_gcs(bucket_name: str, blob_name: str) -> pd.DataFrame:
 
 
 def build_bq_from_gcs(
+    client: bigquery.Client,
     dataset_name: str,
     table_name: str,
     bucket_name: str,
@@ -101,6 +108,7 @@ def build_bq_from_gcs(
     Build a bigquery external table from a parquet file in GCS.
 
     Args:
+        client (bigquery.Client): The client to use to create the external table.
         dataset_name (str): The name of the dataset to create.
         table_name (str): The name of the table to create.
         bucket_name (str): The name of the bucket to upload to.
@@ -111,8 +119,6 @@ def build_bq_from_gcs(
     Returns:
         bool: True if the upload was successful, False otherwise.
     """
-    client = bigquery.Client()
-
     # Construct the fully-qualified BigQuery table ID
     table_id = f"{client.project}.{dataset_name}.{table_name}"
 
@@ -140,18 +146,17 @@ def build_bq_from_gcs(
         raise Exception(f"An error occurred while checking if the table exists: {e}")
 
 
-def query_bq(sql_query: str) -> bigquery.QueryJob:
+def query_bq(client: bigquery.Client, sql_query: str) -> bigquery.QueryJob:
     """
     Query bigquery and return results. (可以用在bigquery指令，例如Insert、Update，但沒有要取得資料表的資料)
 
     Args:
+        client (bigquery.Client): The client to use to query bigquery.
         sql_query (str): The SQL query to execute.
 
     Returns:
         bigquery.QueryJob: The result of the query.
     """
-    client = bigquery.Client()
-
     try:
         query_job = client.query(sql_query)
         return query_job.result()  # Return the results for further processing
@@ -159,19 +164,18 @@ def query_bq(sql_query: str) -> bigquery.QueryJob:
         raise Exception(f"Failed to query bigquery table, reason: {e}")
 
 
-def query_bq_to_df(sql_query: str) -> pd.DataFrame():
+def query_bq_to_df(client: bigquery.Client, sql_query: str) -> pd.DataFrame:
     """
     Executes a BigQuery SQL query and directly loads the results into a DataFrame
     using the BigQuery Storage API.  (可以用在bigquery指令，然後取得資料表的資料成為DataFrame)
 
     Args:
+        client (bigquery.Client): The client to use to query bigquery.
         query (str): SQL query string.
 
     Returns:
         pd.DataFrame: The query results as a Pandas DataFrame.
     """
-    client = bigquery.Client()
-
     try:
         query_job = client.query(sql_query)
         return query_job.to_dataframe()  # Convert result to DataFrame
@@ -180,6 +184,7 @@ def query_bq_to_df(sql_query: str) -> pd.DataFrame():
 
 
 def upload_df_to_bq(
+    client: bigquery.Client,
     df: pd.DataFrame,
     dataset_name: str,
     table_name: str,
@@ -189,6 +194,7 @@ def upload_df_to_bq(
     Upload a pandas dataframe to bigquery.
 
     Args:
+        client (bigquery.Client): The client to use to upload to bigquery.
         df (pd.DataFrame): The dataframe to upload.
         dataset_name (str): The name of the dataset to upload to.
         table_name (str): The name of the table to upload to.
@@ -198,8 +204,6 @@ def upload_df_to_bq(
     Returns:
         bool: True if the upload was successful, False otherwise.
     """
-    client = bigquery.Client()
-
     dataset_id = client.dataset(dataset_name)
     table_id = dataset_id.table(table_name)
 
