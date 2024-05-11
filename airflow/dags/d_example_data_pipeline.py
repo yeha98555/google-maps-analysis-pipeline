@@ -2,7 +2,7 @@ import os
 from datetime import timedelta
 
 import pandas as pd
-from google.cloud import bigquery
+from google.cloud import bigquery, storage
 from utils.gcp import (
     build_bq_from_gcs,
     download_df_from_gcs,
@@ -22,6 +22,9 @@ BLOB_NAME = f"{TABLE_NAME}/yellow_tripdata_2021-05.parquet"
 BQ_SRC_DATASET = os.environ.get("BIGQUERY_SRC_DATASET")
 BQ_ODS_DATASET = os.environ.get("BIGQUERY_ODS_DATASET")
 BQ_DIM_DATASET = os.environ.get("BIGQUERY_DIM_DATASET")
+
+GCS_CLIENT = storage.Client()
+BQ_CLIENT = bigquery.Client()
 
 default_args = {
     "owner": "airflow",
@@ -46,7 +49,9 @@ default_args = {
 def d_example_data_pipeline():
     @task
     def e_download_data_from_gcs():
-        return download_df_from_gcs(bucket_name=RAW_BUCKET, blob_name=BLOB_NAME)
+        return download_df_from_gcs(
+            client=GCS_CLIENT, bucket_name=RAW_BUCKET, blob_name=BLOB_NAME
+        )
 
     @task
     def t_data_clean(df: pd.DataFrame) -> pd.DataFrame:
@@ -77,7 +82,9 @@ def d_example_data_pipeline():
         return df[df["fare_amount"] < 10]
 
     @task
-    def l_upload_transformed_data_to_gcs(df: pd.DataFrame, bucket_name, blob_name):
+    def l_upload_transformed_data_to_gcs(
+        df: pd.DataFrame, bucket_name: str, blob_name: str
+    ):
         """
         Upload transformed data to GCS.
 
@@ -86,7 +93,12 @@ def d_example_data_pipeline():
             bucket_name (str): bucket name.
             blob_name (str): blob name.
         """
-        upload_df_to_gcs(bucket_name=bucket_name, blob_name=blob_name, df=df)
+        upload_df_to_gcs(
+            client=GCS_CLIENT,
+            bucket_name=bucket_name,
+            blob_name=blob_name,
+            df=df,
+        )
 
     @task
     def l_create_bq_external_table(
@@ -102,6 +114,7 @@ def d_example_data_pipeline():
             table_name (str): table name.
         """
         build_bq_from_gcs(
+            client=BQ_CLIENT,
             dataset_name=dataset_name,
             table_name=table_name,
             bucket_name=bucket_name,
@@ -140,7 +153,8 @@ def d_example_data_pipeline():
         """
         # 通常應該不會用來查詢，只是簡單示範可以執行sql，可能可以替換成Insert、Update之類的，沒有要取得回傳值成pd.DataFrame的
         query = f"SELECT * FROM `{dataset_name}.{table_name}` WHERE fare_amount = 1"
-        results = query_bq(query)
+        results = query_bq(client=BQ_CLIENT, query=query)
+        # 執行結果輸出
         for row in results:
             print(row)
 
@@ -165,7 +179,7 @@ def d_example_data_pipeline():
         ON t1.VendorID = t2.VendorID
         WHERE t1.fare_amount = 1
         """
-        return query_bq_to_df(query)
+        return query_bq_to_df(client=BQ_CLIENT, query=query)
 
     @task
     def l_upload_joined_data_to_bq(
@@ -180,6 +194,7 @@ def d_example_data_pipeline():
             table_name (str): table name.
         """
         upload_df_to_bq(
+            client=BQ_CLIENT,
             dataset_name=dataset_name,
             table_name=table_name,
             df=df,
