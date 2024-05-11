@@ -172,10 +172,11 @@ def query_bq_to_df(sql_query: str) -> pd.DataFrame():
     """
     client = bigquery.Client()
 
-    df = pd.read_gbq(
-        sql_query, project_id=client.project, dialect="standard", use_bqstorage_api=True
-    )
-    return df
+    try:
+        query_job = client.query(sql_query)
+        return query_job.to_dataframe()  # Convert result to DataFrame
+    except Exception as e:
+        raise Exception(f"Failed to query bigquery table, reason: {e}")
 
 
 def upload_df_to_bq(
