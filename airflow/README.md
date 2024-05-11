@@ -27,3 +27,5 @@ docker-compose up
 - query bigquery and create new table.
 
 ## Reference
+
+- [TIR101 Group 2](https://github.com/harryhowiefish/TIR101_Group2): Refer to Airflow settings and Upload to GCS.
