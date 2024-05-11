@@ -77,7 +77,9 @@ def d_example_data_pipeline():
         return df[df["fare_amount"] < 10]
 
     @task
-    def l_upload_transformed_data_to_gcs(df: pd.DataFrame, bucket_name, blob_name):
+    def l_upload_transformed_data_to_gcs(
+        df: pd.DataFrame, bucket_name: str, blob_name: str
+    ):
         """
         Upload transformed data to GCS.
 
