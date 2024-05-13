@@ -48,16 +48,16 @@ def d_gmaps_reviews_src_to_ods():
     def t_remove_unused_columns(bq_src_dataset: str, table_name: str) -> pd.DataFrame:
         query = f"""
         SELECT
-          place_id,
-          place_name,
-          review_id,
-          rating,
-          review_text,
-          published_at,
-          user_name,
-          user_is_local_guide,
-          user_url,
-          extracted_at
+          `place_id`,
+          `place_name`,
+          `review_id`,
+          `rating`,
+          `review_text`,
+          `published_at`,
+          `user_name`,
+          `user_is_local_guide`,
+          `user_url`,
+          `extracted_at`
         FROM `{bq_src_dataset}`.`{table_name}`
         """
         return query_bq_to_df(BQ_CLIENT, query)
