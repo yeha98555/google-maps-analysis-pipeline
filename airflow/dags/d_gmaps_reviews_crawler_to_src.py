@@ -10,8 +10,6 @@ from airflow.providers.docker.operators.docker import DockerOperator
 
 RAW_BUCKET = os.environ.get("GCP_GCS_RAW_BUCKET")
 BLOB_NAME = "gmaps_reviews"
-BQ_SRC_DATASET = os.environ.get("BIGQUERY_SRC_DATASET")
-TABLE_NAME = "ods_gmaps_reviews"
 GCS_CLIENT = storage.Client()
 BQ_CLIENT = bigquery.Client()
 
