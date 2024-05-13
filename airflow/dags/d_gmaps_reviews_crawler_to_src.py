@@ -39,7 +39,7 @@ def d_gmaps_reviews_crawler_to_src():
         auto_remove=True,
         environment={
             "GCS_BUCKET_NAME": os.environ.get("GCP_GCS_RAW_BUCKET"),
-            "GCS_BLOB_NAME": "gmaps_reviews/",
+            "GCS_BLOB_NAME": BLOB_NAME,
         },
         command="make run",
         mounts=[
