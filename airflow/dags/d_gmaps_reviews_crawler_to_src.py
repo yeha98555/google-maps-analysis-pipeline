@@ -9,7 +9,7 @@ from airflow.operators.dagrun_operator import TriggerDagRunOperator
 from airflow.providers.docker.operators.docker import DockerOperator
 
 RAW_BUCKET = os.environ.get("GCP_GCS_RAW_BUCKET")
-BLOB_NAME = "gmaps_reviews"
+BLOB_NAME = "gmaps"
 GCS_CLIENT = storage.Client()
 BQ_CLIENT = bigquery.Client()
 
@@ -26,7 +26,7 @@ default_args = {
     default_args=default_args,
     schedule_interval="@daily",
     catchup=False,
-    tags=["gmaps_reviews"],
+    tags=["gmaps"],
 )
 def d_gmaps_reviews_crawler_to_src():
     el_gmaps_reviews_crawler = DockerOperator(
@@ -36,7 +36,7 @@ def d_gmaps_reviews_crawler_to_src():
         api_version="auto",
         auto_remove=True,
         environment={
-            "GCS_BUCKET_NAME": os.environ.get("GCP_GCS_RAW_BUCKET"),
+            "GCS_BUCKET_NAME": RAW_BUCKET,
             "GCS_BLOB_NAME": BLOB_NAME,
         },
         command="make run",
