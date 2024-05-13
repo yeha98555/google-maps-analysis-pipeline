@@ -5,6 +5,7 @@ from docker.types import Mount
 from google.cloud import bigquery, storage
 
 from airflow.decorators import dag
+from airflow.operators.dagrun_operator import TriggerDagRunOperator
 from airflow.providers.docker.operators.docker import DockerOperator
 
 RAW_BUCKET = os.environ.get("GCP_GCS_RAW_BUCKET")
@@ -56,7 +57,12 @@ def d_gmaps_reviews_crawler_to_src():
         network_mode="bridge",
     )
 
-    el_gmaps_reviews_crawler
+    trigger_dag_gmaps_reviews_src_to_ods = TriggerDagRunOperator(
+        task_id="trigger_dag_gmaps_reviews_src_to_ods",
+        trigger_dag_id="d_gmaps_reviews_src_to_ods",
+    )
+
+    el_gmaps_reviews_crawler >> trigger_dag_gmaps_reviews_src_to_ods
 
 
 d_gmaps_reviews_crawler_to_src()
