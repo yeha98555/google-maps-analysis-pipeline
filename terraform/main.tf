@@ -86,6 +86,18 @@ resource "google_bigquery_dataset" "etl_dim" {
   location   = var.region
 }
 
+resource "google_bigquery_dataset" "etl_fact" {
+  dataset_id = "etl_fact"
+  project    = var.project_id
+  location   = var.region
+}
+
+resource "google_bigquery_dataset" "etl_mart" {
+  dataset_id = "etl_mart"
+  project    = var.project_id
+  location   = var.region
+}
+
 # IAM for Airflow Service Account
 resource "google_service_account" "airflow" {
   account_id   = "airflow-account"
