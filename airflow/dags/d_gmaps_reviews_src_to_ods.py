@@ -42,7 +42,6 @@ def d_gmaps_reviews_src_to_ods():
             table_name=table_name,
             bucket_name=bucket_name,
             blob_name=blob_name,
-            partition_by="published_at",
         )
 
     @task
