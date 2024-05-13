@@ -55,12 +55,12 @@ def d_gmaps_reviews_crawler_to_src():
         network_mode="bridge",
     )
 
-    trigger_dag_gmaps_reviews_src_to_ods = TriggerDagRunOperator(
-        task_id="trigger_dag_gmaps_reviews_src_to_ods",
-        trigger_dag_id="d_gmaps_reviews_src_to_ods",
+    trigger_dag_gmaps_places_src_to_ods = TriggerDagRunOperator(
+        task_id="trigger_d_gmaps_places_src_to_ods",
+        trigger_dag_id="d_gmaps_places_src_to_ods",
     )
 
-    el_gmaps_reviews_crawler >> trigger_dag_gmaps_reviews_src_to_ods
+    el_gmaps_reviews_crawler >> trigger_dag_gmaps_places_src_to_ods
 
 
 d_gmaps_reviews_crawler_to_src()
