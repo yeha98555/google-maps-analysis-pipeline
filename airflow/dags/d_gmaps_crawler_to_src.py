@@ -28,8 +28,8 @@ default_args = {
     catchup=False,
     tags=["gmaps"],
 )
-def d_gmaps_reviews_crawler_to_src():
-    el_gmaps_reviews_crawler = DockerOperator(
+def d_gmaps_crawler_to_src():
+    el_gmaps_crawler = DockerOperator(
         task_id="el_gmaps_reviews_crawler",
         # use gmaps-scraper image on https://github.com/yeha98552/google-maps-reviews-scraper
         image="gmaps-scraper",
@@ -55,12 +55,12 @@ def d_gmaps_reviews_crawler_to_src():
         network_mode="bridge",
     )
 
-    trigger_dag_gmaps_places_src_to_ods = TriggerDagRunOperator(
+    trigger_d_gmaps_places_src_to_ods = TriggerDagRunOperator(
         task_id="trigger_d_gmaps_places_src_to_ods",
         trigger_dag_id="d_gmaps_places_src_to_ods",
     )
 
-    el_gmaps_reviews_crawler >> trigger_dag_gmaps_places_src_to_ods
+    el_gmaps_crawler >> trigger_d_gmaps_places_src_to_ods
 
 
-d_gmaps_reviews_crawler_to_src()
+d_gmaps_crawler_to_src()
