@@ -60,7 +60,14 @@ def d_gmaps_crawler_to_src():
         trigger_dag_id="d_gmaps_places_src_to_ods",
     )
 
-    el_gmaps_crawler >> trigger_d_gmaps_places_src_to_ods
+    trigger_d_gmaps_reviews_src_to_ods = TriggerDagRunOperator(
+        task_id="trigger_d_gmaps_reviews_src_to_ods",
+        trigger_dag_id="d_gmaps_reviews_src_to_ods",
+    )
+
+    el_gmaps_crawler
+    trigger_d_gmaps_places_src_to_ods.set_upstream(el_gmaps_crawler)
+    trigger_d_gmaps_reviews_src_to_ods.set_upstream(el_gmaps_crawler)
 
 
 d_gmaps_crawler_to_src()
