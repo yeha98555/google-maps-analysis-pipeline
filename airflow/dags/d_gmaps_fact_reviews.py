@@ -41,7 +41,8 @@ def d_gmaps_fact_reviews():
         FROM
           `{src_dataset}`.`{src_table}`
         """
-        return query_bq(BQ_CLIENT, query)
+        query_bq(BQ_CLIENT, query)
+        return "fact-reviews created."
 
     l_fact_reviews(
         src_dataset=BQ_ODS_DATASET,

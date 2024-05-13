@@ -41,7 +41,8 @@ def d_gmaps_dim_places():
         FROM
           `{src_dataset}`.`{src_table}`
         """
-        return query_bq(BQ_CLIENT, query)
+        query_bq(BQ_CLIENT, query)
+        return "dim-places created."
 
     l_dim_places(
         src_dataset=BQ_ODS_DATASET,

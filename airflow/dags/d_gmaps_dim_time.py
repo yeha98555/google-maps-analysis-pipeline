@@ -37,7 +37,7 @@ def d_gmaps_dim_time():
           FORMAT_DATE("%Y%m%d", published_at) AS date_id,
           published_at AS date,
           EXTRACT(YEAR FROM published_at) AS year,
-          EXTRACT(MONTH FROM published_at) AS moth,
+          EXTRACT(MONTH FROM published_at) AS month,
           EXTRACT(DAY FROM published_at) AS day,
           CASE
             WHEN EXTRACT(MONTH FROM published_at) IN (1, 2, 3) THEN 1
@@ -48,7 +48,8 @@ def d_gmaps_dim_time():
         FROM
           `{src_dataset}`.`{src_table}`
         """
-        return query_bq(BQ_CLIENT, query)
+        query_bq(BQ_CLIENT, query)
+        return "dim-time created."
 
     l_dim_time(
         src_dataset=BQ_ODS_DATASET,
