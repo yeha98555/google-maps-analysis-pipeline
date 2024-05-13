@@ -1,20 +1,3 @@
-# # next dags
-# def trigger_dag_gmaps_reviews_ods_to_fct_reviews():
-#     pass
-
-# def trigger_dag_gmaps_reviews_ods_to_fct_keywords():
-#     pass
-
-# def trigger_dag_gmaps_reviews_ods_to_dim_users():
-#     pass
-
-# def trigger_dag_gmaps_reviews_ods_to_dim_places():
-#     pass
-
-# def trigger_dag_gmaps_reviews_ods_to_dim_time():
-#     pass
-
-
 import os
 from datetime import datetime, timedelta
 
