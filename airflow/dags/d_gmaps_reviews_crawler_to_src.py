@@ -1,0 +1,62 @@
+import os
+from datetime import datetime, timedelta
+
+from docker.types import Mount
+from google.cloud import bigquery, storage
+
+from airflow.decorators import dag
+from airflow.providers.docker.operators.docker import DockerOperator
+
+RAW_BUCKET = os.environ.get("GCP_GCS_RAW_BUCKET")
+BLOB_NAME = "gmaps_reviews"
+BQ_SRC_DATASET = os.environ.get("BIGQUERY_SRC_DATASET")
+TABLE_NAME = "ods_gmaps_reviews"
+GCS_CLIENT = storage.Client()
+BQ_CLIENT = bigquery.Client()
+
+
+default_args = {
+    "owner": "airflow",
+    "start_date": datetime(2024, 5, 1),
+    "retries": 1,
+    "retry_delay": timedelta(minutes=5),
+}
+
+
+@dag(
+    default_args=default_args,
+    schedule_interval="@daily",
+    catchup=False,
+    tags=["gmaps_reviews"],
+)
+def d_gmaps_reviews_crawler_to_src():
+    el_gmaps_reviews_crawler = DockerOperator(
+        task_id="el_gmaps_reviews_crawler",
+        # use gmaps-scraper image on https://github.com/yeha98552/google-maps-reviews-scraper
+        image="gmaps-scraper",
+        api_version="auto",
+        auto_remove=True,
+        environment={
+            "GCS_BUCKET_NAME": os.environ.get("GCP_GCS_RAW_BUCKET"),
+            "GCS_BLOB_NAME": "gmaps_reviews/",
+        },
+        command="make run",
+        mounts=[
+            Mount(
+                source=os.environ.get("CRAWER_GOOGLE_CREDENTIALS_LOCAL_PATH"),
+                target="/app/crawler_gcp_keyfile.json",
+                type="bind",
+                read_only=True,
+            ),
+        ],
+        mount_tmp_dir=False,
+        mem_limit="4g",
+        shm_size="2g",
+        docker_url="tcp://docker-proxy:2375",
+        network_mode="bridge",
+    )
+
+    el_gmaps_reviews_crawler
+
+
+d_gmaps_reviews_crawler_to_src()
