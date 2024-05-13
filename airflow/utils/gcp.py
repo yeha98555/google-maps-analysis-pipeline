@@ -103,6 +103,7 @@ def build_bq_from_gcs(
     bucket_name: str,
     blob_name: str,
     schema: List[bigquery.SchemaField] = None,
+    partition_by: str = None,
 ) -> bool:
     """
     Build a bigquery external table from a parquet file in GCS.
@@ -115,6 +116,7 @@ def build_bq_from_gcs(
         blob_name (str): The name of the blob to upload to.
         schema (List[bigquery.SchemaField], optional): The schema of the table to upload to. Default is None.
                                                         If None, use the default schema (automatic-detect).
+        partition_by (str, optional): The field to partition by. Default is None.
 
     Returns:
         bool: True if the upload was successful, False otherwise.
@@ -132,6 +134,14 @@ def build_bq_from_gcs(
         external_config.source_uris = [f"gs://{bucket_name}/{blob_name}"]
         if schema:
             external_config.schema = schema
+        # Set partition field
+        if partition_by:
+            external_config.time_partitioning = bigquery.TimePartitioning(
+                field=partition_by,
+                expiration_ms=None,
+                require_partition_filter=False,
+                type_="DAY",
+            )
         # Create a table with the external data source configuration
         table = bigquery.Table(table_id)
         table.external_data_configuration = external_config
@@ -188,6 +198,7 @@ def upload_df_to_bq(
     df: pd.DataFrame,
     dataset_name: str,
     table_name: str,
+    partition_by: str = None,
     schema: List[bigquery.SchemaField] = None,
 ) -> bool:
     """
@@ -213,6 +224,13 @@ def upload_df_to_bq(
     )
     if schema:
         job_config.schema = schema
+    if partition_by:
+        job_config.time_partitioning = bigquery.TimePartitioning(
+            field=partition_by,
+            expiration_ms=None,
+            require_partition_filter=False,
+            type_="DAY",
+        )
 
     try:
         job = client.load_table_from_dataframe(df, table_id, job_config=job_config)
