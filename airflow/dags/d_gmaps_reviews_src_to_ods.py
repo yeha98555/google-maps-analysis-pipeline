@@ -89,7 +89,7 @@ def d_gmaps_reviews_src_to_ods():
                 new_date = extract_datetime - relativedelta(years=years)
             else:  # Unknown
                 return pd.NaT
-            return new_date
+            return new_date.date()
 
         df["extracted_at"] = pd.to_datetime(df["extracted_at"])
         df["published_at"] = df.apply(
@@ -118,7 +118,7 @@ def d_gmaps_reviews_src_to_ods():
                 bigquery.SchemaField("review_id", "STRING", mode="REQUIRED"),
                 bigquery.SchemaField("rating", "INTEGER"),
                 bigquery.SchemaField("review_text", "STRING"),
-                bigquery.SchemaField("published_at", "TIMESTAMP"),
+                bigquery.SchemaField("published_at", "DATE"),
                 bigquery.SchemaField("user_name", "STRING"),
                 bigquery.SchemaField("user_is_local_guide", "BOOLEAN"),
                 bigquery.SchemaField("user_url", "STRING"),
