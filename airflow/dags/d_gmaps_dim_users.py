@@ -42,7 +42,7 @@ default_args = {
     catchup=False,
     tags=["gmaps"],
 )
-def d_gmaps_user_dim():
+def d_gmaps_dim_users():
     @task
     def l_dim_users(
         src_dataset: str, src_table: str, dest_dataset: str, dest_table: str
@@ -66,4 +66,4 @@ def d_gmaps_user_dim():
     )
 
 
-d_gmaps_user_dim()
+d_gmaps_dim_users()
