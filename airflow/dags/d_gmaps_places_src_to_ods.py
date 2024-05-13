@@ -123,7 +123,7 @@ def d_gmaps_places_src_to_ods():
         )
 
     @task
-    def create_bq_external_table_with_partition(
+    def create_bq_external_table(
         bucket_name: str, blob_name: str, dataset_name: str, table_name: str
     ):
         build_bq_from_gcs(
@@ -151,7 +151,7 @@ def d_gmaps_places_src_to_ods():
     df = t_convert_place_id(df)
     (
         l_upload_transformed_places_to_gcs(df, PROCESSED_BUCKET, f"{BLOB_NAME}.parquet")
-        >> create_bq_external_table_with_partition(
+        >> create_bq_external_table(
             PROCESSED_BUCKET, f"{BLOB_NAME}.parquet", BQ_ODS_DATASET, ODS_TABLE_NAME
         )
     )
