@@ -1,9 +1,9 @@
-import hashlib
 import os
 from datetime import datetime, timedelta
 
 import pandas as pd
 from google.cloud import bigquery, storage
+from utils.common import rename_place_id
 from utils.gcp import build_bq_from_gcs, download_df_from_gcs, upload_df_to_gcs
 
 from airflow.decorators import dag, task
@@ -105,10 +105,7 @@ def d_gmaps_places_src_to_ods():
 
     @task
     def t_convert_place_id(df: pd.DataFrame):
-        # place_id 使用自己設定的編碼規則, 暫時使用md5 hash
-        df["place_id"] = df["place_id_raw"].apply(
-            lambda x: "place_" + hashlib.md5(x.encode("utf-8")).hexdigest()
-        )
+        df["place_id"] = df["place_id_raw"].apply(lambda x: rename_place_id(x))
         return df
 
     @task
