@@ -120,7 +120,7 @@ def d_gmaps_places_src_to_ods():
         )
 
     @task
-    def create_bq_external_table(
+    def l_create_bq_external_table(
         bucket_name: str, blob_name: str, dataset_name: str, table_name: str
     ):
         build_bq_from_gcs(
@@ -143,12 +143,14 @@ def d_gmaps_places_src_to_ods():
         )
 
     latest_blob_name = t_get_latest_places_blobname(RAW_BUCKET, BLOB_NAME)
-    df = t_get_places_df_from_gcs(RAW_BUCKET, latest_blob_name)
-    df = t_rename_places_columns(df)
-    df = t_convert_place_id(df)
+    df_raw = t_get_places_df_from_gcs(RAW_BUCKET, latest_blob_name)
+    df_transformed = t_rename_places_columns(df_raw)
+    df_transformed = t_convert_place_id(df_transformed)
     (
-        l_upload_transformed_places_to_gcs(df, PROCESSED_BUCKET, f"{BLOB_NAME}.parquet")
-        >> create_bq_external_table(
+        l_upload_transformed_places_to_gcs(
+            df_transformed, PROCESSED_BUCKET, f"{BLOB_NAME}.parquet"
+        )
+        >> l_create_bq_external_table(
             PROCESSED_BUCKET, f"{BLOB_NAME}.parquet", BQ_ODS_DATASET, ODS_TABLE_NAME
         )
     )
