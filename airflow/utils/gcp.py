@@ -271,3 +271,62 @@ def upload_df_to_bq(
         return True
     except Exception as e:
         raise Exception(f"Failed to upload df to bigquery, reason: {e}")
+
+
+def delete_blob(client, bucket_name, blob_name):
+    """
+    Delete a blob from GCS.
+
+    Args:
+        client (storage.Client): The client to use to interact with Google Cloud Storage.
+        bucket_name (str): The name of the bucket.
+        blob_name (str): The name of the blob to delete.
+    """
+    try:
+        bucket = client.bucket(bucket_name)
+        blob = bucket.blob(blob_name)
+        if not blob.exists():
+            print(f"Blob {blob_name} does not exist in bucket {bucket_name}.")
+            return False
+        blob.delete()
+        print(f"Blob {blob_name} deleted from bucket {bucket_name}.")
+        return True
+    except Exception as e:
+        raise Exception(f"Failed to delete blob, reason: {e}")
+
+
+def rename_blob(
+    client: storage.Client, bucket_name: str, blob_name: str, new_blob_name: str
+) -> bool:
+    """
+    Rename a blob in GCS by copying it to a new name and then deleting the original.
+
+    Args:
+        client (storage.Client): The client to use with GCS.
+        bucket_name (str): The name of the bucket where the blob is stored.
+        blob_name (str): The current name of the blob.
+        new_blob_name (str): The new name for the blob.
+
+    Returns:
+        bool: True if the rename was successful, False otherwise.
+    """
+    bucket = client.bucket(bucket_name)
+    blob = bucket.blob(blob_name)
+    new_blob = bucket.blob(new_blob_name)
+
+    if not blob.exists():
+        print(f"Blob {blob_name} does not exist in bucket {bucket_name}.")
+        return False
+
+    if new_blob.exists():
+        print(f"Blob {new_blob_name} already exists in bucket {bucket_name}.")
+        return False
+
+    # Copy the blob to the new location
+    bucket.copy_blob(blob, bucket, new_blob_name)
+
+    # Delete the original blob
+    blob.delete()
+
+    print(f"Blob {blob_name} renamed to {new_blob_name} in bucket {bucket_name}.")
+    return True
