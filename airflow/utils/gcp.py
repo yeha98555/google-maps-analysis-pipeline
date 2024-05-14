@@ -13,7 +13,11 @@ storage.blob._DEFAULT_CHUNKSIZE = 1024 * 1024  # 1 MB
 
 
 def upload_df_to_gcs(
-    client: storage.Client, bucket_name: str, blob_name: str, df: pd.DataFrame
+    client: storage.Client,
+    bucket_name: str,
+    blob_name: str,
+    df: pd.DataFrame,
+    filetype: str = "parquet",
 ) -> bool:
     """
     Upload a pandas dataframe to GCS.
@@ -23,6 +27,8 @@ def upload_df_to_gcs(
         bucket_name (str): The name of the bucket to upload to.
         blob_name (str): The name of the blob to upload to.
         df (pd.DataFrame): The dataframe to upload.
+        filetype (str): The type of the file to download. Default is "parquet".
+                        Can be "parquet" or "csv" or "jsonl".
 
     Returns:
         bool: True if the upload was successful, False otherwise.
@@ -34,9 +40,17 @@ def upload_df_to_gcs(
         print("File already exists in GCP.")
         return False
     try:
-        blob.upload_from_string(
-            df.to_parquet(index=False), content_type="application/octet-stream"
-        )
+        if filetype == "parquet":
+            blob.upload_from_string(
+                df.to_parquet(index=False), content_type="application/octet-stream"
+            )
+        elif filetype == "csv":
+            blob.upload_from_string(df.to_csv(index=False), content_type="text/csv")
+        elif filetype == "jsonl":
+            blob.upload_from_string(
+                df.to_json(orient="records", lines=True),
+                content_type="application/jsonl",
+            )
         print("Upload successful.")
         return True
     except Exception as e:
@@ -73,7 +87,7 @@ def upload_file_to_gcs(
 
 
 def download_df_from_gcs(
-    client: storage.Client, bucket_name: str, blob_name: str
+    client: storage.Client, bucket_name: str, blob_name: str, filetype: str = "parquet"
 ) -> pd.DataFrame:
     """
     Download a pandas dataframe from GCS.
@@ -82,6 +96,8 @@ def download_df_from_gcs(
         client (storage.Client): The client to use to download from GCS.
         bucket_name (str): The name of the bucket to download from.
         blob_name (str): The name of the blob to download from.
+        filetype (str): The type of the file to download. Default is "parquet".
+                        Can be "parquet" or "csv" or "jsonl".
 
     Returns:
         pd.DataFrame: The dataframe downloaded from GCS.
@@ -93,7 +109,18 @@ def download_df_from_gcs(
         raise FileNotFoundError(f"file {blob_name} not found in bucket {bucket_name}")
 
     bytes_data = blob.download_as_bytes()
-    return pd.read_parquet(BytesIO(bytes_data))
+    data_io = BytesIO(bytes_data)
+
+    if filetype == "csv":
+        return pd.read_csv(data_io)
+    elif filetype == "parquet":
+        return pd.read_parquet(data_io)
+    elif filetype == "jsonl":
+        return pd.read_json(data_io, lines=True)
+    else:
+        raise ValueError(
+            f"Invalid filetype: {filetype}. Please specify 'parquet' or 'csv' or 'jsonl'."
+        )
 
 
 def build_bq_from_gcs(
@@ -104,6 +131,7 @@ def build_bq_from_gcs(
     blob_name: str,
     schema: List[bigquery.SchemaField] = None,
     partition_by: str = None,
+    filetype: str = "parquet",
 ) -> bool:
     """
     Build a bigquery external table from a parquet file in GCS.
@@ -117,6 +145,7 @@ def build_bq_from_gcs(
         schema (List[bigquery.SchemaField], optional): The schema of the table to upload to. Default is None.
                                                         If None, use the default schema (automatic-detect).
         partition_by (str, optional): The field to partition by. Default is None.
+        filetype (str): The type of the file to download. Default is "parquet". Can be "parquet" or "csv" or "jsonl".
 
     Returns:
         bool: True if the upload was successful, False otherwise.
@@ -130,7 +159,16 @@ def build_bq_from_gcs(
         return False
     except NotFound:
         # Define the external data source configuration
-        external_config = bigquery.ExternalConfig("PARQUET")
+        if filetype == "parquet":
+            external_config = bigquery.ExternalConfig("PARQUET")
+        elif filetype == "csv":
+            external_config = bigquery.ExternalConfig("CSV")
+        elif filetype == "jsonl":
+            external_config = bigquery.ExternalConfig("JSONL")
+        else:
+            raise ValueError(
+                f"Invalid filetype: {filetype}. Please specify 'parquet' or 'csv' or 'jsonl'."
+            )
         external_config.source_uris = [f"gs://{bucket_name}/{blob_name}"]
         if schema:
             external_config.schema = schema
@@ -200,6 +238,7 @@ def upload_df_to_bq(
     table_name: str,
     partition_by: str = None,
     schema: List[bigquery.SchemaField] = None,
+    filetype: str = "parquet",
 ) -> bool:
     """
     Upload a pandas dataframe to bigquery.
@@ -211,6 +250,7 @@ def upload_df_to_bq(
         table_name (str): The name of the table to upload to.
         schema (List[bigquery.SchemaField], optional): The schema of the table to upload to. Default is None.
                                                         If None, use the default schema (automatic-detect).
+        filetype (str): The type of the file to download. Default is "parquet". Can be "parquet" or "csv" or "jsonl".
 
     Returns:
         bool: True if the upload was successful, False otherwise.
@@ -222,6 +262,16 @@ def upload_df_to_bq(
         source_format=bigquery.SourceFormat.PARQUET,
         write_disposition=bigquery.WriteDisposition.WRITE_TRUNCATE,
     )
+    if filetype == "parquet":
+        job_config.source_format = bigquery.SourceFormat.PARQUET
+    elif filetype == "csv":
+        job_config.source_format = bigquery.SourceFormat.CSV
+    elif filetype == "jsonl":
+        job_config.source_format = bigquery.SourceFormat.JSONL
+    else:
+        raise ValueError(
+            f"Invalid filetype: {filetype}. Please specify 'parquet' or 'csv' or 'jsonl'."
+        )
     if schema:
         job_config.schema = schema
     if partition_by:
