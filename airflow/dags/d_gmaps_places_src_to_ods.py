@@ -42,7 +42,10 @@ def d_gmaps_places_src_to_ods():
     @task
     def t_get_places_df_from_gcs(bucket_name: str, blob_name: str) -> pd.DataFrame:
         return download_df_from_gcs(
-            client=GCS_CLIENT, bucket_name=bucket_name, blob_name=blob_name
+            client=GCS_CLIENT,
+            bucket_name=bucket_name,
+            blob_name=blob_name,
+            filetype="jsonl",
         )
 
     # @task
@@ -90,7 +93,23 @@ def d_gmaps_places_src_to_ods():
     #     blob.delete()
 
     @task
-    def t_rename_places_columns(df: pd.DataFrame):
+    def t_remove_places_columns(df: pd.DataFrame) -> pd.DataFrame:
+        df.drop(
+            columns=[
+                "status",
+                "featured_question",
+                "cid",
+                "phone",
+                "owner",
+                "plus_code",
+                "data_id",
+            ],
+            inplace=True,
+        )
+        return df
+
+    @task
+    def t_rename_places_columns(df: pd.DataFrame) -> pd.DataFrame:
         df.rename(
             columns={
                 "place_id": "place_id_raw",
@@ -104,25 +123,26 @@ def d_gmaps_places_src_to_ods():
         return df
 
     @task
-    def t_convert_place_id(df: pd.DataFrame):
+    def t_convert_place_id(df: pd.DataFrame) -> pd.DataFrame:
         df["place_id"] = df["place_id_raw"].apply(lambda x: rename_place_id(x))
         return df
 
     @task
     def l_upload_transformed_places_to_gcs(
         df: pd.DataFrame, bucket_name: str, blob_name: str
-    ):
+    ) -> bool:
         upload_df_to_gcs(
             client=GCS_CLIENT,
             bucket_name=bucket_name,
             blob_name=blob_name,
             df=df,
+            filetype="jsonl",
         )
 
     @task
     def l_create_bq_external_table(
         bucket_name: str, blob_name: str, dataset_name: str, table_name: str
-    ):
+    ) -> bool:
         build_bq_from_gcs(
             client=BQ_CLIENT,
             bucket_name=bucket_name,
@@ -131,27 +151,245 @@ def d_gmaps_places_src_to_ods():
             table_name=table_name,
             schema=[
                 bigquery.SchemaField("place_id", "STRING", mode="REQUIRED"),
-                bigquery.SchemaField("place_id_raw", "STRING", mode="REQUIRED"),
-                bigquery.SchemaField("place_name", "STRING", mode="REQUIRED"),
-                bigquery.SchemaField("main_category", "STRING", mode="NULLABLE"),
-                # bigquery.SchemaField("categories", "STRING", mode="REPEATED"),
+                bigquery.SchemaField("name_name", "STRING", mode="REQUIRED"),
+                bigquery.SchemaField("description", "STRING"),
+                bigquery.SchemaField("total_reviews", "INTEGER"),
+                bigquery.SchemaField("avg_rating", "FLOAT"),
+                bigquery.SchemaField("can_claim", "BOOLEAN"),
+                bigquery.SchemaField("featured_image", "STRING"),
+                bigquery.SchemaField("main_category", "STRING"),
+                bigquery.SchemaField("categories", "STRING", mode="REPEATED"),
                 bigquery.SchemaField("google_place_url", "STRING", mode="REQUIRED"),
-                bigquery.SchemaField("total_reviews", "INTEGER", mode="NULLABLE"),
-                bigquery.SchemaField("avg_rating", "FLOAT", mode="NULLABLE"),
-                bigquery.SchemaField("address", "STRING", mode="NULLABLE"),
+                bigquery.SchemaField("workday_timing", "STRING"),
+                bigquery.SchemaField("closed_on", "STRING"),
+                bigquery.SchemaField("address", "STRING"),
+                bigquery.SchemaField(
+                    "review_keywords",
+                    "RECORD",
+                    mode="REPEATED",
+                    fields=[
+                        bigquery.SchemaField("keyword", "STRING"),
+                        bigquery.SchemaField("count", "INTEGER"),
+                    ],
+                ),
+                bigquery.SchemaField("link", "STRING"),
+                bigquery.SchemaField("status", "STRING"),
+                bigquery.SchemaField("price_range", "STRING"),
+                bigquery.SchemaField(
+                    "reviews_per_rating",
+                    "RECORD",
+                    fields=[
+                        bigquery.SchemaField("rating_1", "INTEGER"),
+                        bigquery.SchemaField("rating_2", "INTEGER"),
+                        bigquery.SchemaField("rating_3", "INTEGER"),
+                        bigquery.SchemaField("rating_4", "INTEGER"),
+                        bigquery.SchemaField("rating_5", "INTEGER"),
+                    ],
+                ),
+                bigquery.SchemaField(
+                    "coordinates",
+                    "RECORD",
+                    fields=[
+                        bigquery.SchemaField("latitude", "FLOAT"),
+                        bigquery.SchemaField("longitude", "FLOAT"),
+                    ],
+                ),
+                bigquery.SchemaField(
+                    "detailed_address",
+                    "RECORD",
+                    fields=[
+                        bigquery.SchemaField("ward", "STRING"),
+                        bigquery.SchemaField("street", "STRING"),
+                        bigquery.SchemaField("city", "STRING"),
+                        bigquery.SchemaField("postal_code", "STRING"),
+                        bigquery.SchemaField("state", "STRING"),
+                        bigquery.SchemaField("country_code", "STRING"),
+                    ],
+                ),
+                bigquery.SchemaField("time_zone", "STRING"),
+                bigquery.SchemaField(
+                    "menu",
+                    "RECORD",
+                    fields=[
+                        bigquery.SchemaField("link", "STRING"),
+                        bigquery.SchemaField("source", "STRING"),
+                    ],
+                ),
+                bigquery.SchemaField("reservations", "STRING", mode="REPEATED"),
+                bigquery.SchemaField("order_online_links", "STRING", mode="REPEATED"),
+                bigquery.SchemaField(
+                    "about",
+                    "RECORD",
+                    mode="REPEATED",
+                    fields=[
+                        bigquery.SchemaField("id", "STRING"),
+                        bigquery.SchemaField("name", "STRING"),
+                        bigquery.SchemaField(
+                            "options",
+                            "RECORD",
+                            mode="REPEATED",
+                            fields=[
+                                bigquery.SchemaField("name", "STRING"),
+                                bigquery.SchemaField("enabled", "BOOLEAN"),
+                            ],
+                        ),
+                    ],
+                ),
+                bigquery.SchemaField(
+                    "images",
+                    "RECORD",
+                    mode="REPEATED",
+                    fields=[
+                        bigquery.SchemaField("about", "STRING"),
+                        bigquery.SchemaField("link", "STRING"),
+                    ],
+                ),
+                bigquery.SchemaField(
+                    "hours",
+                    "RECORD",
+                    mode="REPEATED",
+                    fields=[
+                        bigquery.SchemaField("day", "STRING"),
+                        bigquery.SchemaField("times", "STRING", mode="REPEATED"),
+                    ],
+                ),
+                bigquery.SchemaField(
+                    "most_popular_times",
+                    "RECORD",
+                    mode="REPEATED",
+                    fields=[
+                        bigquery.SchemaField("hour_of_day", "INTEGER"),
+                        bigquery.SchemaField("average_popularity", "FLOAT"),
+                        bigquery.SchemaField("time_label", "STRING"),
+                    ],
+                ),
+                bigquery.SchemaField(
+                    "popular_times",
+                    "RECORD",
+                    fields=[
+                        bigquery.SchemaField(
+                            "Monday",
+                            "RECORD",
+                            mode="REPEATED",
+                            fields=[
+                                bigquery.SchemaField("hour_of_day", "INTEGER"),
+                                bigquery.SchemaField("time_label", "STRING"),
+                                bigquery.SchemaField(
+                                    "popularity_percentage", "INTEGER"
+                                ),
+                                bigquery.SchemaField(
+                                    "popularity_description", "STRING"
+                                ),
+                            ],
+                        ),
+                        bigquery.SchemaField(
+                            "Tuesday",
+                            "RECORD",
+                            mode="REPEATED",
+                            fields=[
+                                bigquery.SchemaField("hour_of_day", "INTEGER"),
+                                bigquery.SchemaField("time_label", "STRING"),
+                                bigquery.SchemaField(
+                                    "popularity_percentage", "INTEGER"
+                                ),
+                                bigquery.SchemaField(
+                                    "popularity_description", "STRING"
+                                ),
+                            ],
+                        ),
+                        bigquery.SchemaField(
+                            "Wednesday",
+                            "RECORD",
+                            mode="REPEATED",
+                            fields=[
+                                bigquery.SchemaField("hour_of_day", "INTEGER"),
+                                bigquery.SchemaField("time_label", "STRING"),
+                                bigquery.SchemaField(
+                                    "popularity_percentage", "INTEGER"
+                                ),
+                                bigquery.SchemaField(
+                                    "popularity_description", "STRING"
+                                ),
+                            ],
+                        ),
+                        bigquery.SchemaField(
+                            "Thursday",
+                            "RECORD",
+                            mode="REPEATED",
+                            fields=[
+                                bigquery.SchemaField("hour_of_day", "INTEGER"),
+                                bigquery.SchemaField("time_label", "STRING"),
+                                bigquery.SchemaField(
+                                    "popularity_percentage", "INTEGER"
+                                ),
+                                bigquery.SchemaField(
+                                    "popularity_description", "STRING"
+                                ),
+                            ],
+                        ),
+                        bigquery.SchemaField(
+                            "Friday",
+                            "RECORD",
+                            mode="REPEATED",
+                            fields=[
+                                bigquery.SchemaField("hour_of_day", "INTEGER"),
+                                bigquery.SchemaField("time_label", "STRING"),
+                                bigquery.SchemaField(
+                                    "popularity_percentage", "INTEGER"
+                                ),
+                                bigquery.SchemaField(
+                                    "popularity_description", "STRING"
+                                ),
+                            ],
+                        ),
+                        bigquery.SchemaField(
+                            "Saturday",
+                            "RECORD",
+                            mode="REPEATED",
+                            fields=[
+                                bigquery.SchemaField("hour_of_day", "INTEGER"),
+                                bigquery.SchemaField("time_label", "STRING"),
+                                bigquery.SchemaField(
+                                    "popularity_percentage", "INTEGER"
+                                ),
+                                bigquery.SchemaField(
+                                    "popularity_description", "STRING"
+                                ),
+                            ],
+                        ),
+                        bigquery.SchemaField(
+                            "Sunday",
+                            "RECORD",
+                            mode="REPEATED",
+                            fields=[
+                                bigquery.SchemaField("hour_of_day", "INTEGER"),
+                                bigquery.SchemaField("time_label", "STRING"),
+                                bigquery.SchemaField(
+                                    "popularity_percentage", "INTEGER"
+                                ),
+                                bigquery.SchemaField(
+                                    "popularity_description", "STRING"
+                                ),
+                            ],
+                        ),
+                    ],
+                ),
+                bigquery.SchemaField("is_spending_on_ads", "BOOLEAN"),
             ],
+            filetype="jsonl",
         )
 
     latest_blob_name = t_get_latest_places_blobname(RAW_BUCKET, BLOB_NAME)
     df_raw = t_get_places_df_from_gcs(RAW_BUCKET, latest_blob_name)
-    df_transformed = t_rename_places_columns(df_raw)
+    df_transformed = t_remove_places_columns(df_raw)
+    df_transformed = t_rename_places_columns(df_transformed)
     df_transformed = t_convert_place_id(df_transformed)
     (
         l_upload_transformed_places_to_gcs(
-            df_transformed, PROCESSED_BUCKET, f"{BLOB_NAME}.parquet"
+            df_transformed, PROCESSED_BUCKET, f"{BLOB_NAME}.jsonl"
         )
         >> l_create_bq_external_table(
-            PROCESSED_BUCKET, f"{BLOB_NAME}.parquet", BQ_ODS_DATASET, ODS_TABLE_NAME
+            PROCESSED_BUCKET, f"{BLOB_NAME}.jsonl", BQ_ODS_DATASET, ODS_TABLE_NAME
         )
     )
 
