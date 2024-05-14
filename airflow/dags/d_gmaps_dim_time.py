@@ -34,7 +34,6 @@ def d_gmaps_dim_time():
         CREATE OR REPLACE TABLE `{dest_dataset}`.`{dest_table}` AS
         SELECT
           DISTINCT
-          FORMAT_DATE("%Y%m%d", published_at) AS date_id,
           published_at AS date,
           EXTRACT(YEAR FROM published_at) AS year,
           EXTRACT(MONTH FROM published_at) AS month,
