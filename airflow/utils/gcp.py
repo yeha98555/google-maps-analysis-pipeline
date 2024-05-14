@@ -3,7 +3,7 @@ from typing import List
 
 import pandas as pd
 from google.cloud import bigquery, storage
-from google.cloud.exceptions import NotFound
+from google.cloud.exceptions import Conflict, NotFound
 
 # WORKAROUND to prevent timeout for files > 6 MB on 800 kbps upload speed.
 # (Ref: https://github.com/googleapis/python-storage/issues/74)
@@ -352,3 +352,66 @@ def rename_blob(
 
     print(f"Blob {blob_name} renamed to {new_blob_name} in bucket {bucket_name}.")
     return True
+
+
+def rename_table(
+    client: bigquery.Client, dataset_name: str, table_name: str, new_table_name: str
+) -> bool:
+    """
+    Rename a BigQuery table by creating a new table with the new name and copying data from the old table,
+    then deleting the old table. Handles both regular and external tables.
+
+    Args:
+        client (bigquery.Client): The client to use with BigQuery.
+        dataset_name (str): The name of the dataset containing the table.
+        table_name (str): The current name of the table.
+        new_table_name (str): The new name for the table.
+
+    Returns:
+        bool: True if the rename was successful, False otherwise.
+    """
+    dataset_ref = client.dataset(dataset_name)
+    old_table_ref = dataset_ref.table(table_name)
+    new_table_ref = dataset_ref.table(new_table_name)
+
+    try:
+        old_table = client.get_table(old_table_ref)
+
+        if old_table.table_type == "EXTERNAL":
+            # Create a new external table with the same configuration
+            new_table = bigquery.Table(new_table_ref, schema=old_table.schema)
+            new_table.external_data_configuration = (
+                old_table.external_data_configuration
+            )
+            client.create_table(new_table)
+            print(f"External table {table_name} renamed to {new_table_name}.")
+
+            # Optionally delete the old external table
+            client.delete_table(old_table_ref)
+            print(f"Old external table {table_name} deleted.")
+        else:
+            # Handle regular tables
+            new_table = bigquery.Table(new_table_ref, schema=old_table.schema)
+            new_table.time_partitioning = old_table.time_partitioning
+            new_table.range_partitioning = old_table.range_partitioning
+            new_table.clustering_fields = old_table.clustering_fields
+            new_table.description = old_table.description
+            client.create_table(new_table)
+
+            # Copy data from the old table to the new table
+            job = client.copy_table(old_table_ref, new_table_ref)
+            job.result()  # Wait for the job to complete
+
+            # Delete the old table
+            client.delete_table(old_table_ref)
+            print(f"Table {table_name} renamed to {new_table_name}.")
+
+        return True
+    except NotFound:
+        print(f"Table {table_name} not found.")
+        return False
+    except Conflict:
+        print(f"Conflict occurred: Table {new_table_name} already exists.")
+        return False
+    except Exception as e:
+        raise Exception(f"Failed to rename table, reason: {e}")
