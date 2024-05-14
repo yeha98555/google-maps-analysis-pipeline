@@ -1,3 +1,4 @@
+import io
 from io import BytesIO
 from typing import List
 
@@ -41,16 +42,22 @@ def upload_df_to_gcs(
         return False
     try:
         if filetype == "parquet":
-            blob.upload_from_string(
-                df.to_parquet(index=False), content_type="application/octet-stream"
-            )
+            buffer = io.BytesIO()
+            df.to_parquet(buffer, index=False)
+            content_type = "application/octet-stream"
         elif filetype == "csv":
-            blob.upload_from_string(df.to_csv(index=False), content_type="text/csv")
+            buffer = io.StringIO()
+            df.to_csv(buffer, index=False)
+            content_type = "text/csv"
         elif filetype == "jsonl":
-            blob.upload_from_string(
-                df.to_json(orient="records", lines=True),
-                content_type="application/jsonl",
-            )
+            buffer = io.StringIO()
+            df.to_json(buffer, orient="records", lines=True)
+            content_type = "application/jsonl"
+        else:
+            raise ValueError("Unsupported file format. Use 'parquet' or 'jsonl'.")
+
+        buffer.seek(0)
+        blob.upload_from_file(buffer, content_type=content_type)
         print("Upload successful.")
         return True
     except Exception as e:
@@ -159,16 +166,16 @@ def build_bq_from_gcs(
         return False
     except NotFound:
         # Define the external data source configuration
-        if filetype == "parquet":
-            external_config = bigquery.ExternalConfig("PARQUET")
-        elif filetype == "csv":
-            external_config = bigquery.ExternalConfig("CSV")
-        elif filetype == "jsonl":
-            external_config = bigquery.ExternalConfig("JSONL")
-        else:
-            raise ValueError(
-                f"Invalid filetype: {filetype}. Please specify 'parquet' or 'csv' or 'jsonl'."
+        external_config = bigquery.ExternalConfig(
+            {"parquet": "PARQUET", "csv": "CSV", "jsonl": "NEWLINE_DELIMITED_JSON"}.get(
+                filetype
             )
+        )
+        if not external_config:
+            raise ValueError(
+                f"Invalid filetype: {filetype}. Please specify 'parquet', 'csv', or 'jsonl'."
+            )
+
         external_config.source_uris = [f"gs://{bucket_name}/{blob_name}"]
         if schema:
             external_config.schema = schema
