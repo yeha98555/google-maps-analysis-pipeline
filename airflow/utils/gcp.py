@@ -273,7 +273,7 @@ def upload_df_to_bq(
         raise Exception(f"Failed to upload df to bigquery, reason: {e}")
 
 
-def delete_blob(client, bucket_name, blob_name):
+def delete_blob(client, bucket_name, blob_name) -> bool:
     """
     Delete a blob from GCS.
 
@@ -281,6 +281,9 @@ def delete_blob(client, bucket_name, blob_name):
         client (storage.Client): The client to use to interact with Google Cloud Storage.
         bucket_name (str): The name of the bucket.
         blob_name (str): The name of the blob to delete.
+
+    Returns:
+        bool: True if the deletion was successful, False otherwise.
     """
     try:
         bucket = client.bucket(bucket_name)
