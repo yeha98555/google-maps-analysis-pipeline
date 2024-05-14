@@ -295,6 +295,28 @@ def delete_blob(client, bucket_name, blob_name):
         raise Exception(f"Failed to delete blob, reason: {e}")
 
 
+def delete_table(client: bigquery.Client, dataset_name: str, table_name: str) -> bool:
+    """
+    Delete a bigquery table.
+
+    Args:
+        client (bigquery.Client): The client to use to delete the table.
+        dataset_name (str): The name of the dataset to delete the table from.
+        table_name (str): The name of the table to delete.
+
+    Returns:
+        bool: True if the deletion was successful, False otherwise.
+    """
+    table_id = f"{dataset_name}.{table_name}"
+    try:
+        client.delete_table(table_id)
+        print(f"Table {table_id} deleted.")
+    except NotFound:
+        print(f"Table {table_id} not found.")
+        return False
+    return True
+
+
 def rename_blob(
     client: storage.Client, bucket_name: str, blob_name: str, new_blob_name: str
 ) -> bool:
