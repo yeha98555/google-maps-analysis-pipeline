@@ -418,3 +418,29 @@ def rename_table(
         return False
     except Exception as e:
         raise Exception(f"Failed to rename table, reason: {e}")
+
+
+def list_blobs(
+    client: storage.Client, bucket_name: str, blob_prefix: str = None
+) -> List[storage.Blob]:
+    """
+    List all blobs in a specified GCS bucket optionally filtered by a prefix.
+
+    Args:
+        client (storage.Client): The client to use to interact with Google Cloud Storage.
+        bucket_name (str): The name of the bucket.
+        blob_prefix (str, optional): The prefix to filter blobs. Defaults to None.
+
+    Returns:
+        List[storage.Blob]: A list of blobs sorted by their names.
+    """
+    try:
+        bucket = client.get_bucket(bucket_name)
+        if blob_prefix:
+            blobs = bucket.list_blobs(prefix=blob_prefix)
+        else:
+            blobs = bucket.list_blobs()
+
+        return sorted(blobs, key=lambda x: x.name)
+    except Exception as e:
+        raise Exception(f"Failed to list blobs in bucket {bucket_name}, reason: {e}")
