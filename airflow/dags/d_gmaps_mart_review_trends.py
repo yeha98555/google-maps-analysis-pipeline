@@ -32,11 +32,18 @@ def d_gmaps_mart_review_trends():
         query = f"""
         CREATE OR REPLACE TABLE `{dest_dataset}`.`{dest_table}` AS
         SELECT
+          p.`city`,
+          p.`region`,
           p.`place_name`,
+          p.`main_category`,
+          p.`latitude`,
+          p.`longitude`,
           t.`year`,
           t.`month`,
+          t.`quarter`,
           COUNT(r.`review_id`) AS `total_reviews`,
           ROUND(AVG(r.`rating`), 2) AS `avg_rating`,
+          ROUND(AVG(r.`emotion_score`), 2) AS `avg_emotion_score`,
         FROM
           `{BQ_FACT_DATASET}`.`fact-reviews` r
         JOIN
@@ -46,9 +53,15 @@ def d_gmaps_mart_review_trends():
           `{BQ_DIM_DATASET}`.`dim-reviews_time` t
           ON r.`published_at` = t.`date`
         GROUP BY
+          p.`city`,
+          p.`region`,
           p.`place_name`,
+          p.`main_category`,
+          p.`latitude`,
+          p.`longitude`,
           t.`year`,
-          t.`month`
+          t.`month`,
+          t.`quarter`
         """
         query_bq(BQ_CLIENT, query)
         return f"{dest_table} created."
