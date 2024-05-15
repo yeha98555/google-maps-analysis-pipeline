@@ -1,6 +1,7 @@
 import os
 from datetime import datetime, timedelta
 
+import numpy as np
 import pandas as pd
 from google.cloud import bigquery, storage
 from utils.common import rename_place_id
@@ -103,6 +104,7 @@ def d_gmaps_places_src_to_ods():
                 "owner",
                 "plus_code",
                 "data_id",
+                "reviews_per_rating",
             ],
             inplace=True,
         )
@@ -125,6 +127,36 @@ def d_gmaps_places_src_to_ods():
     @task
     def t_convert_place_id(df: pd.DataFrame) -> pd.DataFrame:
         df["place_id"] = df["place_id_raw"].apply(lambda x: rename_place_id(x))
+        return df
+
+    @task
+    def t_convert_closed_on_to_list(df: pd.DataFrame) -> pd.DataFrame:
+        df["closed_on"] = df["closed_on"].apply(
+            lambda x: x if isinstance(x, list) else [x]
+        )
+        return df
+
+    @task
+    def t_convert_categories_to_list(df: pd.DataFrame) -> pd.DataFrame:
+        df["categories"] = df["categories"].apply(
+            lambda x: x if isinstance(x, list) else [x]
+        )
+        return df
+
+    @task
+    def t_convert_most_popular_times_null(df: pd.DataFrame) -> pd.DataFrame:
+        # if "Not Present" in most_popular_times, replace it with NaN
+        df["most_popular_times"] = df["most_popular_times"].apply(
+            lambda x: x if x != "Not Present" else np.nan
+        )
+        return df
+
+    @task
+    def t_convert_popular_times_null(df: pd.DataFrame) -> pd.DataFrame:
+        # if "Not Present" in popular_times, replace it with NaN
+        df["popular_times"] = df["popular_times"].apply(
+            lambda x: x if x != "Not Present" else np.nan
+        )
         return df
 
     @task
@@ -151,7 +183,8 @@ def d_gmaps_places_src_to_ods():
             table_name=table_name,
             schema=[
                 bigquery.SchemaField("place_id", "STRING", mode="REQUIRED"),
-                bigquery.SchemaField("name_name", "STRING", mode="REQUIRED"),
+                bigquery.SchemaField("place_id_raw", "STRING", mode="REQUIRED"),
+                bigquery.SchemaField("place_name", "STRING", mode="REQUIRED"),
                 bigquery.SchemaField("description", "STRING"),
                 bigquery.SchemaField("total_reviews", "INTEGER"),
                 bigquery.SchemaField("avg_rating", "FLOAT"),
@@ -161,7 +194,7 @@ def d_gmaps_places_src_to_ods():
                 bigquery.SchemaField("categories", "STRING", mode="REPEATED"),
                 bigquery.SchemaField("google_place_url", "STRING", mode="REQUIRED"),
                 bigquery.SchemaField("workday_timing", "STRING"),
-                bigquery.SchemaField("closed_on", "STRING"),
+                bigquery.SchemaField("closed_on", "STRING", mode="REPEATED"),
                 bigquery.SchemaField("address", "STRING"),
                 bigquery.SchemaField(
                     "review_keywords",
@@ -175,17 +208,18 @@ def d_gmaps_places_src_to_ods():
                 bigquery.SchemaField("link", "STRING"),
                 bigquery.SchemaField("status", "STRING"),
                 bigquery.SchemaField("price_range", "STRING"),
-                bigquery.SchemaField(
-                    "reviews_per_rating",
-                    "RECORD",
-                    fields=[
-                        bigquery.SchemaField("rating_1", "INTEGER"),
-                        bigquery.SchemaField("rating_2", "INTEGER"),
-                        bigquery.SchemaField("rating_3", "INTEGER"),
-                        bigquery.SchemaField("rating_4", "INTEGER"),
-                        bigquery.SchemaField("rating_5", "INTEGER"),
-                    ],
-                ),
+                bigquery.SchemaField("reviews_link", "STRING"),
+                # bigquery.SchemaField(
+                #     "reviews_per_rating",
+                #     "RECORD",
+                #     fields=[
+                #         bigquery.SchemaField("1", "INTEGER"),
+                #         bigquery.SchemaField("2", "INTEGER"),
+                #         bigquery.SchemaField("3", "INTEGER"),
+                #         bigquery.SchemaField("4", "INTEGER"),
+                #         bigquery.SchemaField("5", "INTEGER"),
+                #     ],
+                # ),
                 bigquery.SchemaField(
                     "coordinates",
                     "RECORD",
@@ -379,19 +413,21 @@ def d_gmaps_places_src_to_ods():
             filetype="jsonl",
         )
 
-    latest_blob_name = t_get_latest_places_blobname(RAW_BUCKET, BLOB_NAME)
-    df_raw = t_get_places_df_from_gcs(RAW_BUCKET, latest_blob_name)
-    df_transformed = t_remove_places_columns(df_raw)
-    df_transformed = t_rename_places_columns(df_transformed)
-    df_transformed = t_convert_place_id(df_transformed)
-    (
-        l_upload_transformed_places_to_gcs(
-            df_transformed, PROCESSED_BUCKET, f"{BLOB_NAME}.jsonl"
-        )
-        >> l_create_bq_external_table(
-            PROCESSED_BUCKET, f"{BLOB_NAME}.jsonl", BQ_ODS_DATASET, ODS_TABLE_NAME
-        )
+    t1 = t_get_latest_places_blobname(RAW_BUCKET, BLOB_NAME)
+    t2 = t_get_places_df_from_gcs(RAW_BUCKET, t1)
+    t3 = t_remove_places_columns(t2)
+    t4 = t_rename_places_columns(t3)
+    t5 = t_convert_place_id(t4)
+    t6 = t_convert_closed_on_to_list(t5)
+    t7 = t_convert_categories_to_list(t6)
+    t8 = t_convert_most_popular_times_null(t7)
+    t9 = t_convert_popular_times_null(t8)
+    t10 = l_upload_transformed_places_to_gcs(t9, PROCESSED_BUCKET, f"{BLOB_NAME}.jsonl")
+    t11 = l_create_bq_external_table(
+        PROCESSED_BUCKET, f"{BLOB_NAME}.jsonl", BQ_ODS_DATASET, ODS_TABLE_NAME
     )
+
+    t10 >> t11
 
 
 d_gmaps_places_src_to_ods()
