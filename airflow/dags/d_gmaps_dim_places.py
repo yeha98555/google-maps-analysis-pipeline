@@ -35,6 +35,9 @@ def d_gmaps_dim_places():
         SELECT DISTINCT
           `place_id`,
           `place_name`,
+          `detailed_address`.`country_code` AS `country`,
+          REGEXP_EXTRACT(`detailed_address`.`state`, r"^(.*?[市區])") AS city,
+          REGEXP_EXTRACT(`detailed_address`.`state`, r"([市區])(.*)$") AS region,
           `address`,
           `google_place_url`,
           `main_category`,
