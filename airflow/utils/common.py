@@ -12,4 +12,4 @@ def rename_place_id(place_name: str) -> str:
     Returns:
         str: The hash value of the place name
     """
-    return "place_" + hashlib.md5(place_name.encode("utf-8")).hexdigest()
+    return hashlib.md5(place_name.encode("utf-8")).hexdigest()
