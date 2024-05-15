@@ -1,8 +1,10 @@
 import os
 from datetime import datetime, timedelta
 
+import pandas as pd
 from google.cloud import bigquery
-from utils.gcp import query_bq
+from textblob import TextBlob
+from utils.gcp import query_bq_to_df, upload_df_to_bq
 
 from airflow.decorators import dag, task
 
@@ -27,29 +29,49 @@ default_args = {
 )
 def d_gmaps_fact_reviews():
     @task
-    def l_fact_reviews(
-        src_dataset: str, src_table: str, dest_dataset: str, dest_table: str
-    ):
+    def e_load_reviews(src_dataset: str, src_table: str) -> pd.DataFrame:
         query = f"""
-        CREATE OR REPLACE TABLE `{dest_dataset}`.`{dest_table}` AS
         SELECT DISTINCT
           `review_id`,
           `place_id`,
           `user_name`,
           `rating`,
           `published_at`,
+          `review_text`,
         FROM
           `{src_dataset}`.`{src_table}`
         """
-        query_bq(BQ_CLIENT, query)
-        return "fact-reviews created."
+        return query_bq_to_df(client=BQ_CLIENT, sql_query=query)
 
-    l_fact_reviews(
-        src_dataset=BQ_ODS_DATASET,
-        src_table=TABLE_NAME,
-        dest_dataset=BQ_FACT_DATASET,
-        dest_table="fact-reviews",
-    )
+    @task
+    def t_reviews_emotion_score(df: pd.DataFrame) -> pd.DataFrame:
+        df["emotion_score"] = df["review_text"].apply(
+            lambda x: round(TextBlob(x).sentiment.polarity, 2)
+        )
+        df.drop(columns=["review_text"], inplace=True)
+        return df
+
+    @task
+    def l_fact_reviews(df: pd.DataFrame, dest_dataset: str, dest_table: str):
+        upload_df_to_bq(
+            BQ_CLIENT,
+            df,
+            dest_dataset,
+            dest_table,
+            partition_by="published_at",
+            schema=[
+                bigquery.SchemaField("review_id", "STRING", mode="REQUIRED"),
+                bigquery.SchemaField("place_id", "STRING", mode="REQUIRED"),
+                bigquery.SchemaField("user_name", "STRING", mode="REQUIRED"),
+                bigquery.SchemaField("rating", "INTEGER", mode="REQUIRED"),
+                bigquery.SchemaField("published_at", "DATE", mode="REQUIRED"),
+                bigquery.SchemaField("emotion_score", "FLOAT", mode="REQUIRED"),
+            ],
+        )
+
+    df = e_load_reviews(BQ_ODS_DATASET, TABLE_NAME)
+    df_transformed = t_reviews_emotion_score(df)
+    l_fact_reviews(df_transformed, BQ_FACT_DATASET, "fact-reviews")
 
 
 d_gmaps_fact_reviews()
