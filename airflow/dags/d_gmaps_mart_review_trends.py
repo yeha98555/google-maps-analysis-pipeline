@@ -34,6 +34,7 @@ def d_gmaps_mart_review_trends():
         SELECT
           p.`city`,
           p.`region`,
+          p.`place_id`,
           p.`place_name`,
           p.`main_category`,
           p.`latitude`,
@@ -55,6 +56,7 @@ def d_gmaps_mart_review_trends():
         GROUP BY
           p.`city`,
           p.`region`,
+          p.`place_id`,
           p.`place_name`,
           p.`main_category`,
           p.`latitude`,
