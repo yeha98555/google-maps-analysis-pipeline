@@ -126,7 +126,7 @@ def d_gmaps_places_src_to_ods():
 
     @task
     def t_convert_place_id(df: pd.DataFrame) -> pd.DataFrame:
-        df["place_id"] = df["place_id_raw"].apply(lambda x: rename_place_id(x))
+        df["place_id"] = df["place_name"].apply(lambda x: rename_place_id(x))
         return df
 
     @task
