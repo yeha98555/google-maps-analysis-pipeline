@@ -48,7 +48,7 @@ def d_gmaps_mart_review_trends():
           `{BQ_FACT_DATASET}`.`fact-reviews` r
         JOIN
           `{BQ_DIM_DATASET}`.`dim-reviews_places` p
-          ON r.`place_id` = p.`place_id`
+          ON r.`place_name` = p.`place_name`
         JOIN
           `{BQ_DIM_DATASET}`.`dim-reviews_time` t
           ON r.`published_at` = t.`date`

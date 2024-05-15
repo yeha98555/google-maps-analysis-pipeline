@@ -33,7 +33,7 @@ def d_gmaps_fact_reviews():
         query = f"""
         SELECT DISTINCT
           `review_id`,
-          `place_id`,
+          `place_name`,
           `user_name`,
           `rating`,
           `published_at`,
@@ -61,7 +61,7 @@ def d_gmaps_fact_reviews():
             partition_by="published_at",
             schema=[
                 bigquery.SchemaField("review_id", "STRING", mode="REQUIRED"),
-                bigquery.SchemaField("place_id", "STRING", mode="REQUIRED"),
+                bigquery.SchemaField("place_name", "STRING", mode="REQUIRED"),
                 bigquery.SchemaField("user_name", "STRING", mode="REQUIRED"),
                 bigquery.SchemaField("rating", "INTEGER", mode="REQUIRED"),
                 bigquery.SchemaField("published_at", "DATE", mode="REQUIRED"),
