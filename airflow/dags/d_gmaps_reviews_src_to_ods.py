@@ -63,7 +63,22 @@ def d_gmaps_reviews_src_to_ods():
         return query_bq_to_df(BQ_CLIENT, query)
 
     @task
+    def t_remove_all_null_rows(df: pd.DataFrame) -> pd.DataFrame:
+        print(f"Number of null rows: {df.isnull().all(axis=1).sum()}")
+        return df.dropna(how="all")
+
+    @task
+    def t_remove_required_null_rows(df: pd.DataFrame) -> pd.DataFrame:
+        print(
+            f"Number of null required columns: {df[['place_name', 'review_id', 'published_at']].isnull().sum()}"
+        )
+        return df.dropna(subset=["place_name", "review_id", "published_at"])
+
+    @task
     def t_remove_duplicate_reviews(df: pd.DataFrame) -> pd.DataFrame:
+        print(
+            f"Number of duplicate reviews: {df.duplicated(subset=['review_id']).sum()}"
+        )
         return df.drop_duplicates(subset=["review_id"])
 
     @task
@@ -130,16 +145,20 @@ def d_gmaps_reviews_src_to_ods():
         RAW_BUCKET, SRC_BLOB_NAME, BQ_SRC_DATASET, TABLE_NAME
     )
     t2 = t_remove_unused_columns(BQ_SRC_DATASET, TABLE_NAME)
-    t3 = t_remove_duplicate_reviews(t2)
-    t4 = t_convert_reveiws_published_datetime(t3)
-    t5 = t_convert_place_id(t4)
-    t6 = l_upload_transformed_reviews_to_bq(t5, BQ_ODS_DATASET, TABLE_NAME)
+    t3 = t_remove_all_null_rows(t2)
+    t4 = t_remove_required_null_rows(t3)
+    t5 = t_remove_duplicate_reviews(t4)
+    t6 = t_convert_reveiws_published_datetime(t5)
+    t7 = t_convert_place_id(t6)
+    t8 = l_upload_transformed_reviews_to_bq(t7, BQ_ODS_DATASET, TABLE_NAME)
 
     t2.set_upstream(t1)
     t3.set_upstream(t2)
     t4.set_upstream(t3)
     t5.set_upstream(t4)
     t6.set_upstream(t5)
+    t7.set_upstream(t6)
+    t8.set_upstream(t7)
 
 
 d_gmaps_reviews_src_to_ods()
