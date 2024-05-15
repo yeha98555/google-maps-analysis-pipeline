@@ -87,7 +87,10 @@ def d_gmaps_reviews_src_to_ods():
             """
             Convert the date format from relative date strings to absolute date strings.
             """
-            if "小時前" in date_str:
+            if "分鐘前" in date_str:
+                minutes = int(date_str.split("分鐘前")[0])
+                new_date = extract_datetime - relativedelta(minutes=minutes)
+            elif "小時前" in date_str:
                 hours = int(date_str.split("小時前")[0])
                 new_date = extract_datetime - relativedelta(hours=hours)
             elif "天前" in date_str:
