@@ -34,15 +34,15 @@ def d_gmaps_dim_time():
         CREATE OR REPLACE TABLE `{dest_dataset}`.`{dest_table}` AS
         SELECT
           DISTINCT
-          published_at AS date,
-          EXTRACT(YEAR FROM published_at) AS year,
-          EXTRACT(MONTH FROM published_at) AS month,
-          EXTRACT(DAY FROM published_at) AS day,
+          `published_at` AS date,
+          EXTRACT(YEAR FROM `published_at`) AS year,
+          EXTRACT(MONTH FROM `published_at`) AS month,
+          EXTRACT(DAY FROM `published_at`) AS day,
           CASE
-            WHEN EXTRACT(MONTH FROM published_at) IN (1, 2, 3) THEN 1
-            WHEN EXTRACT(MONTH FROM published_at) IN (4, 5, 6) THEN 2
-            WHEN EXTRACT(MONTH FROM published_at) IN (7, 8, 9) THEN 3
-            WHEN EXTRACT(MONTH FROM published_at) IN (10, 11, 12) THEN 4
+            WHEN EXTRACT(MONTH FROM `published_at`) IN (1, 2, 3) THEN 1
+            WHEN EXTRACT(MONTH FROM `published_at`) IN (4, 5, 6) THEN 2
+            WHEN EXTRACT(MONTH FROM `published_at`) IN (7, 8, 9) THEN 3
+            WHEN EXTRACT(MONTH FROM `published_at`) IN (10, 11, 12) THEN 4
           END AS quarter
         FROM
           `{src_dataset}`.`{src_table}`
