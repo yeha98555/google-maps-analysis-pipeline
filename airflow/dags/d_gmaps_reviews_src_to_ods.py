@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 import pandas as pd
 from dateutil.relativedelta import relativedelta
 from google.cloud import bigquery, storage
-from utils.common import rename_place_id
+from utils.common import mapping_place_id
 from utils.gcp import build_bq_from_gcs, query_bq_to_df, upload_df_to_bq
 
 from airflow.decorators import dag, task
@@ -116,8 +116,22 @@ def d_gmaps_reviews_src_to_ods():
         return df
 
     @task
-    def t_convert_place_id(df: pd.DataFrame) -> pd.DataFrame:
-        df["place_id"] = df["place_name"].apply(lambda x: rename_place_id(x))
+    def e_download_gmaps_places_from_gcs() -> pd.DataFrame:
+        query = f"""
+        SELECT
+            attraction_id,
+            attraction_name,
+        FROM `{BQ_ODS_DATASET}.ods_tripadvisor_info`
+        """
+        return query_bq_to_df(BQ_CLIENT, query)
+
+    @task
+    def t_convert_place_id(
+        df: pd.DataFrame, df_tripadvisor: pd.DataFrame
+    ) -> pd.DataFrame:
+        df["place_id"] = df["place_name"].apply(
+            lambda x: mapping_place_id(x, df_tripadvisor)
+        )
         return df
 
     @task
@@ -152,7 +166,8 @@ def d_gmaps_reviews_src_to_ods():
     t4 = t_remove_required_null_rows(t3)
     t5 = t_remove_duplicate_reviews(t4)
     t6 = t_convert_reveiws_published_datetime(t5)
-    t7 = t_convert_place_id(t6)
+    e_download_gmaps_places_from_gcs()
+    t7 = t_convert_place_id(t5, t6)
     t8 = l_upload_transformed_reviews_to_bq(t7, BQ_ODS_DATASET, TABLE_NAME)
 
     t2.set_upstream(t1)

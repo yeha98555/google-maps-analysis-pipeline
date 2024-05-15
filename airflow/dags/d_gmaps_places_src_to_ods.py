@@ -4,8 +4,13 @@ from datetime import datetime, timedelta
 import numpy as np
 import pandas as pd
 from google.cloud import bigquery, storage
-from utils.common import rename_place_id
-from utils.gcp import build_bq_from_gcs, download_df_from_gcs, upload_df_to_gcs
+from utils.common import mapping_place_id
+from utils.gcp import (
+    build_bq_from_gcs,
+    download_df_from_gcs,
+    query_bq_to_df,
+    upload_df_to_gcs,
+)
 
 from airflow.decorators import dag, task
 
@@ -125,8 +130,22 @@ def d_gmaps_places_src_to_ods():
         return df
 
     @task
-    def t_convert_place_id(df: pd.DataFrame) -> pd.DataFrame:
-        df["place_id"] = df["place_name"].apply(lambda x: rename_place_id(x))
+    def e_download_gmaps_places_from_gcs() -> pd.DataFrame:
+        query = f"""
+        SELECT
+            attraction_id,
+            attraction_name,
+        FROM `{BQ_ODS_DATASET}.ods_tripadvisor_info`
+        """
+        return query_bq_to_df(BQ_CLIENT, query)
+
+    @task
+    def t_convert_place_id(
+        df: pd.DataFrame, df_tripadvisor: pd.DataFrame
+    ) -> pd.DataFrame:
+        df["place_id"] = df["place_name"].apply(
+            lambda x: mapping_place_id(x, df_tripadvisor)
+        )
         return df
 
     @task
@@ -417,17 +436,20 @@ def d_gmaps_places_src_to_ods():
     t2 = t_get_places_df_from_gcs(RAW_BUCKET, t1)
     t3 = t_remove_places_columns(t2)
     t4 = t_rename_places_columns(t3)
-    t5 = t_convert_place_id(t4)
-    t6 = t_convert_closed_on_to_list(t5)
-    t7 = t_convert_categories_to_list(t6)
-    t8 = t_convert_most_popular_times_null(t7)
-    t9 = t_convert_popular_times_null(t8)
-    t10 = l_upload_transformed_places_to_gcs(t9, PROCESSED_BUCKET, f"{BLOB_NAME}.jsonl")
-    t11 = l_create_bq_external_table(
+    t5 = e_download_gmaps_places_from_gcs()
+    t6 = t_convert_place_id(t4, t5)
+    t7 = t_convert_closed_on_to_list(t6)
+    t8 = t_convert_categories_to_list(t7)
+    t9 = t_convert_most_popular_times_null(t8)
+    t10 = t_convert_popular_times_null(t9)
+    t11 = l_upload_transformed_places_to_gcs(
+        t10, PROCESSED_BUCKET, f"{BLOB_NAME}.jsonl"
+    )
+    t12 = l_create_bq_external_table(
         PROCESSED_BUCKET, f"{BLOB_NAME}.jsonl", BQ_ODS_DATASET, ODS_TABLE_NAME
     )
 
-    t10 >> t11
+    t11 >> t12
 
 
 d_gmaps_places_src_to_ods()
