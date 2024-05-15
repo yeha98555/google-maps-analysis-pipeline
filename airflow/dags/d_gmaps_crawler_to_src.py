@@ -49,7 +49,7 @@ def d_gmaps_crawler_to_src():
             ),
         ],
         mount_tmp_dir=False,
-        mem_limit="4g",
+        mem_limit="24g",  # 50%-75% of local memory size
         shm_size="2g",
         docker_url="tcp://docker-proxy:2375",
         network_mode="bridge",
