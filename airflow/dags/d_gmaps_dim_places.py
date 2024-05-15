@@ -38,6 +38,8 @@ def d_gmaps_dim_places():
           `detailed_address`.`country_code` AS `country`,
           REGEXP_EXTRACT(`detailed_address`.`state`, r"^(.*?[市|縣])") AS city,
           REGEXP_EXTRACT(`detailed_address`.`state`, r"(?:[市|縣])(.*)$") AS region,
+          `coordinates`.`latitude` AS `latitude`,
+          `coordinates`.`longitude` AS `longitude`,
           `address`,
           `google_place_url`,
           `main_category`,
