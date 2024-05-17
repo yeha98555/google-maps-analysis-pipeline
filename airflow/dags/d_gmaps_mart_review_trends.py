@@ -42,6 +42,7 @@ def d_gmaps_mart_review_trends():
           t.`year`,
           t.`month`,
           t.`quarter`,
+          t.`date`,
           COUNT(r.`review_id`) AS `total_reviews`,
           ROUND(AVG(r.`rating`), 2) AS `avg_rating`,
           ROUND(AVG(r.`emotion_score`), 2) AS `avg_emotion_score`,
@@ -63,7 +64,8 @@ def d_gmaps_mart_review_trends():
           p.`longitude`,
           t.`year`,
           t.`month`,
-          t.`quarter`
+          t.`quarter`,
+          t.`date`
         """
         query_bq(BQ_CLIENT, query)
         return f"{dest_table} created."
