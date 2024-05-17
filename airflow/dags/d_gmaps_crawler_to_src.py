@@ -42,7 +42,7 @@ def d_gmaps_crawler_to_src():
         df = BQ_CLIENT.query(query).to_dataframe()
         attractions = df.to_dict(orient="records")
         # batch
-        batch_size = 1024  # default max_length is 1024
+        batch_size = 1024  # default max_map_length is 1024
         return [
             attractions[i : i + batch_size]
             for i in range(0, len(attractions), batch_size)
