@@ -2,17 +2,18 @@ import os
 from datetime import datetime, timedelta
 
 from docker.types import Mount
-from google.cloud import bigquery, storage
+from google.cloud import bigquery
 
-from airflow.decorators import dag
-from airflow.operators.dagrun_operator import TriggerDagRunOperator
+from airflow.decorators import dag, task
 from airflow.providers.docker.operators.docker import DockerOperator
 
 RAW_BUCKET = os.environ.get("GCP_GCS_RAW_BUCKET")
-BLOB_NAME = "gmaps"
-GCS_CLIENT = storage.Client()
-BQ_CLIENT = bigquery.Client()
+BQ_ODS_DATASET = os.environ.get("BIGQUERY_ODS_DATASET")
+CRAWER_GOOGLE_CREDENTIALS_LOCAL_PATH = os.environ.get(
+    "CRAWER_GOOGLE_CREDENTIALS_LOCAL_PATH"
+)
 
+BQ_CLIENT = bigquery.Client()
 
 default_args = {
     "owner": "airflow",
@@ -29,45 +30,53 @@ default_args = {
     tags=["gmaps"],
 )
 def d_gmaps_crawler_to_src():
-    el_gmaps_crawler = DockerOperator(
-        task_id="el_gmaps_reviews_crawler",
-        # use gmaps-scraper image on https://github.com/yeha98552/google-maps-reviews-scraper
-        image="gmaps-scraper",
-        api_version="auto",
-        auto_remove=True,
-        environment={
-            "GCS_BUCKET_NAME": RAW_BUCKET,
-            "GCS_BLOB_NAME": BLOB_NAME,
-        },
-        command="make run",
-        mounts=[
-            Mount(
-                source=os.environ.get("CRAWER_GOOGLE_CREDENTIALS_LOCAL_PATH"),
-                target="/app/crawler_gcp_keyfile.json",
-                type="bind",
-                read_only=True,
-            ),
-        ],
-        mount_tmp_dir=False,
-        mem_limit="24g",  # 50%-75% of local memory size
-        shm_size="2g",
-        docker_url="tcp://docker-proxy:2375",
-        network_mode="bridge",
-    )
+    @task
+    def get_attraction_list() -> list[dict]:
+        query = f"""
+            SELECT DISTINCT
+                attraction_id,
+                attraction_name
+            FROM
+                `{BQ_ODS_DATASET}`.`ods_tripadvisor_info`
+        """
+        df = BQ_CLIENT.query(query).to_dataframe()
+        return df.to_dict(orient="records")
 
-    trigger_d_gmaps_places_src_to_ods = TriggerDagRunOperator(
-        task_id="trigger_d_gmaps_places_src_to_ods",
-        trigger_dag_id="d_gmaps_places_src_to_ods",
-    )
+    @task
+    def run_gmaps_crawler(attraction: dict):
+        print(f"crawling attraction: {attraction}")
+        attraction_name = attraction["attraction_name"]
+        attraction_id = attraction["attraction_id"]
+        crawler_task = DockerOperator(
+            task_id=f"crawl_{attraction_name}",
+            image="gmaps-scraper",
+            api_version="auto",
+            auto_remove=True,
+            environment={
+                "ATTRACTION_ID": attraction_id,
+                "ATTRACTION_NAME": attraction_name,
+                "GCS_BUCKET_NAME": RAW_BUCKET,
+                "GCS_BLOB_NAME": "gmaps-taiwan",
+            },
+            command="make run",
+            mounts=[
+                Mount(
+                    source=CRAWER_GOOGLE_CREDENTIALS_LOCAL_PATH,
+                    target="/app/crawler_gcp_keyfile.json",
+                    type="bind",
+                    read_only=True,
+                ),
+            ],
+            mount_tmp_dir=False,
+            mem_limit="24g",
+            shm_size="2g",
+            docker_url="tcp://docker-proxy:2375",
+            network_mode="bridge",
+        )
+        return crawler_task.execute({})
 
-    trigger_d_gmaps_reviews_src_to_ods = TriggerDagRunOperator(
-        task_id="trigger_d_gmaps_reviews_src_to_ods",
-        trigger_dag_id="d_gmaps_reviews_src_to_ods",
-    )
-
-    el_gmaps_crawler
-    trigger_d_gmaps_places_src_to_ods.set_upstream(el_gmaps_crawler)
-    trigger_d_gmaps_reviews_src_to_ods.set_upstream(el_gmaps_crawler)
+    attractions = get_attraction_list()
+    run_gmaps_crawler.expand(attraction=attractions)
 
 
 d_gmaps_crawler_to_src()
