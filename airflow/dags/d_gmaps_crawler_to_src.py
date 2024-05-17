@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 
 from docker.types import Mount
 from google.cloud import bigquery
+from utils.bigquery import query_bq_to_df
 
 from airflow.decorators import dag, task
 from airflow.providers.docker.operators.docker import DockerOperator
@@ -39,7 +40,7 @@ def d_gmaps_crawler_to_src():
             FROM
                 `{BQ_ODS_DATASET}`.`ods_tripadvisor_info`
         """
-        df = BQ_CLIENT.query(query).to_dataframe()
+        df = query_bq_to_df(BQ_CLIENT, query)
         attractions = df.to_dict(orient="records")
         # batch
         batch_size = 1024  # default max_map_length is 1024
