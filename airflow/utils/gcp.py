@@ -19,6 +19,7 @@ def upload_df_to_gcs(
     blob_name: str,
     df: pd.DataFrame,
     filetype: str = "parquet",
+    timeout=3000,
 ) -> bool:
     """
     Upload a pandas dataframe to GCS.
@@ -57,7 +58,7 @@ def upload_df_to_gcs(
             raise ValueError("Unsupported file format. Use 'parquet' or 'jsonl'.")
 
         buffer.seek(0)
-        blob.upload_from_file(buffer, content_type=content_type)
+        blob.upload_from_file(buffer, content_type=content_type, timeout=timeout)
         print("Upload successful.")
         return True
     except Exception as e:
