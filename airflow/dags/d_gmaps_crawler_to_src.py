@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 
 from docker.types import Mount
 from google.cloud import bigquery
-from utils.bigquery import query_bq_to_df
+from utils.gcp import query_bq_to_df
 
 from airflow.decorators import dag, task
 from airflow.providers.docker.operators.docker import DockerOperator
