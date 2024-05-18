@@ -6,5 +6,6 @@ pandas
 sqlalchemy
 psycopg2-binary
 apache-airflow-providers-docker
-textblob
+jieba
+snownlp
 fuzzywuzzy

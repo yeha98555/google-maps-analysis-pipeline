@@ -1,9 +1,10 @@
 import os
 from datetime import datetime, timedelta
 
+import jieba
 import pandas as pd
 from google.cloud import bigquery
-from textblob import TextBlob
+from snownlp import SnowNLP
 from utils.gcp import query_bq_to_df, upload_df_to_bq
 
 from airflow.decorators import dag, task
@@ -20,6 +21,39 @@ default_args = {
     "retry_delay": timedelta(minutes=5),
 }
 
+stopwords = set(["的", "是", "在", "我"])
+
+
+def preprocess_text(text: str) -> str:
+    """
+    Preprocess text: cut words and remove stopwords
+
+    Args:
+        text (str): The text to be processed
+    Returns:
+        str: The processed text
+    """
+    words = jieba.cut(text)
+    filtered_words = [word for word in words if word not in stopwords]
+    return " ".join(filtered_words)
+
+
+def analyze_sentiment(text: str) -> float:
+    """
+    Analyze sentiment of the text
+
+    Args:
+        text (str): The text to be analyzed
+    Returns:
+        float: The sentiment score
+    """
+    text = preprocess_text(text)
+    if not text.strip():
+        return 0
+    s = SnowNLP(text)
+    # close to 1 is positive, close to 0 is negative
+    return round(s.sentiments, 2)
+
 
 @dag(
     default_args=default_args,
@@ -29,7 +63,9 @@ default_args = {
 )
 def d_gmaps_fact_reviews():
     @task
-    def e_load_reviews(src_dataset: str, src_table: str) -> pd.DataFrame:
+    def e_load_reviews(
+        src_dataset: str, src_table: str, dest_dataset: str, dest_table: str
+    ) -> pd.DataFrame:
         query = f"""
         SELECT DISTINCT
           `review_id`,
@@ -45,10 +81,10 @@ def d_gmaps_fact_reviews():
 
     @task
     def t_reviews_emotion_score(df: pd.DataFrame) -> pd.DataFrame:
+        # if review_text null emotion is 0, else process analyze_sentiment
         df["emotion_score"] = df["review_text"].apply(
-            lambda x: round(TextBlob(x).sentiment.polarity, 2)
+            lambda x: 0 if pd.isnull(x) else analyze_sentiment(x)
         )
-        df.drop(columns=["review_text"], inplace=True)
         return df
 
     @task
@@ -69,7 +105,7 @@ def d_gmaps_fact_reviews():
             ],
         )
 
-    df = e_load_reviews(BQ_ODS_DATASET, TABLE_NAME)
+    df = e_load_reviews(BQ_ODS_DATASET, TABLE_NAME, BQ_FACT_DATASET, "fact-reviews")
     df_transformed = t_reviews_emotion_score(df)
     l_fact_reviews(df_transformed, BQ_FACT_DATASET, "fact-reviews")
 
