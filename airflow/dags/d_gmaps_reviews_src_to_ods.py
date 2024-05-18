@@ -2,18 +2,18 @@ import os
 from datetime import datetime, timedelta
 
 import pandas as pd
-from dateutil.relativedelta import relativedelta
-from google.cloud import bigquery, storage
-from utils.gcp import build_bq_from_gcs, query_bq_to_df, upload_df_to_bq
+from google.cloud import bigquery
+from utils.gcp import build_bq_from_gcs, query_bq
 
 from airflow.decorators import dag, task
 
 RAW_BUCKET = os.environ.get("GCP_GCS_RAW_BUCKET")
-SRC_BLOB_NAME = "gmaps/detailed-reviews/*.parquet"
+current_date = datetime.now().strftime("%Y-%m-%d")
+SRC_BLOB_NAME = "gmaps-taiwan/detailed-reviews/{current_date}/*.parquet"
 BQ_SRC_DATASET = os.environ.get("BIGQUERY_SRC_DATASET")
 BQ_ODS_DATASET = os.environ.get("BIGQUERY_ODS_DATASET")
-TABLE_NAME = "ods-gmaps_reviews"
-GCS_CLIENT = storage.Client()
+SRC_TABLE_NAME = "ods-gmaps_reviews"
+ODS_TABLE_NAME = "ods-gmaps_reviews"
 BQ_CLIENT = bigquery.Client()
 
 default_args = {
@@ -32,7 +32,7 @@ default_args = {
 )
 def d_gmaps_reviews_src_to_ods():
     @task
-    def e_create_external_table_with_partition(
+    def e_create_external_table(
         bucket_name: str, blob_name: str, dataset_name: str, table_name: str
     ):
         build_bq_from_gcs(
@@ -44,114 +44,45 @@ def d_gmaps_reviews_src_to_ods():
         )
 
     @task
-    def t_remove_unused_columns(bq_src_dataset: str, table_name: str) -> pd.DataFrame:
+    def t_process_src_table() -> pd.DataFrame:
         query = f"""
+        CREATE TEMP FUNCTION convertDate(published_at STRING, extracted_at TIMESTAMP)
+        AS (
+            CASE
+                WHEN ENDS_WITH(published_at, '分鐘前') THEN CAST(TIMESTAMP_SUB(extracted_at, INTERVAL SAFE_CAST(REGEXP_EXTRACT(published_at, r'(\d+)\s*分鐘前') AS INT64) MINUTE) AS DATE)
+                WHEN ENDS_WITH(published_at, '小時前') THEN CAST(TIMESTAMP_SUB(extracted_at, INTERVAL SAFE_CAST(REGEXP_EXTRACT(published_at, r'(\d+)\s*小時前') AS INT64) HOUR) AS DATE)
+                WHEN ENDS_WITH(published_at, '天前') THEN CAST(TIMESTAMP_SUB(extracted_at, INTERVAL SAFE_CAST(REGEXP_EXTRACT(published_at, r'(\d+)\s*天前') AS INT64) DAY) AS DATE)
+                WHEN ENDS_WITH(published_at, '週前') THEN CAST(TIMESTAMP_SUB(extracted_at, INTERVAL SAFE_CAST(REGEXP_EXTRACT(published_at, r'(\d+)\s*週前') AS INT64) * 7 DAY) AS DATE)
+                WHEN ENDS_WITH(published_at, '個月前') THEN DATE_SUB(DATE(extracted_at), INTERVAL SAFE_CAST(REGEXP_EXTRACT(published_at, r'(\d+)\s*個月前') AS INT64) MONTH)
+                WHEN ENDS_WITH(published_at, '年前') THEN DATE_SUB(DATE(extracted_at), INTERVAL SAFE_CAST(REGEXP_EXTRACT(published_at, r'(\d+)\s*年前') AS INT64) YEAR)
+                ELSE NULL
+            END
+        );
+        CREATE OR REPLACE TABLE `{BQ_ODS_DATASET}.{ODS_TABLE_NAME}` AS
         SELECT
-          `place_name`,
-          `review_id`,
-          `rating`,
-          `review_text`,
-          `published_at`,
-          `user_name`,
-          `user_is_local_guide`,
-          `user_url`,
-          `extracted_at`
-        FROM `{bq_src_dataset}`.`{table_name}`
+            `place_name`,
+            `review_id`,
+            `rating`,
+            `review_text`,
+            convertDate(`published_at`, TIMESTAMP(`extracted_at`)) AS `published_at`,
+            `user_name`,
+            `user_is_local_guide`,
+            `user_url`,
+        FROM
+          `{BQ_SRC_DATASET}`.`{SRC_TABLE_NAME}`
+        WHERE
+            `place_name` IS NOT NULL
+            AND `review_id` IS NOT NULL
+            AND `published_at` IS NOT NULL
         """
-        return query_bq_to_df(BQ_CLIENT, query)
+        return query_bq(BQ_CLIENT, query)
 
-    @task
-    def t_remove_all_null_rows(df: pd.DataFrame) -> pd.DataFrame:
-        print(f"Number of null rows: {df.isnull().all(axis=1).sum()}")
-        return df.dropna(how="all")
-
-    @task
-    def t_remove_required_null_rows(df: pd.DataFrame) -> pd.DataFrame:
-        print(
-            f"Number of null required columns: {df[['place_name', 'review_id', 'published_at']].isnull().sum()}"
-        )
-        return df.dropna(subset=["place_name", "review_id", "published_at"])
-
-    @task
-    def t_remove_duplicate_reviews(df: pd.DataFrame) -> pd.DataFrame:
-        print(
-            f"Number of duplicate reviews: {df.duplicated(subset=['review_id']).sum()}"
-        )
-        return df.drop_duplicates(subset=["review_id"])
-
-    @task
-    def t_convert_reveiws_published_datetime(df: pd.DataFrame) -> pd.DataFrame:
-        def convert_datetime(date_str: str, extract_datetime: datetime) -> str:
-            """
-            Convert the date format from relative date strings to absolute date strings.
-            """
-            if "分鐘前" in date_str:
-                minutes = int(date_str.split("分鐘前")[0])
-                new_date = extract_datetime - relativedelta(minutes=minutes)
-            elif "小時前" in date_str:
-                hours = int(date_str.split("小時前")[0])
-                new_date = extract_datetime - relativedelta(hours=hours)
-            elif "天前" in date_str:
-                days = int(date_str.split("天前")[0])
-                new_date = extract_datetime - relativedelta(days=days)
-            elif "週前" in date_str:
-                weeks = int(date_str.split("週前")[0])
-                new_date = extract_datetime - relativedelta(weeks=weeks)
-            elif "個月前" in date_str:
-                months = int(date_str.split("個月前")[0])
-                new_date = extract_datetime - relativedelta(months=months)
-            elif "年前" in date_str:
-                years = int(date_str.split("年前")[0])
-                new_date = extract_datetime - relativedelta(years=years)
-            else:  # Unknown
-                return pd.NaT
-            return new_date.date()
-
-        df["extracted_at"] = pd.to_datetime(df["extracted_at"])
-        df["published_at"] = df.apply(
-            lambda x: convert_datetime(x["published_at"], x["extracted_at"]), axis=1
-        )
-        return df
-
-    @task
-    def l_upload_transformed_reviews_to_bq(
-        df: pd.DataFrame, dataset_name: str, table_name: str
-    ):
-        upload_df_to_bq(
-            client=BQ_CLIENT,
-            dataset_name=dataset_name,
-            table_name=table_name,
-            df=df,
-            partition_by="published_at",
-            schema=[
-                bigquery.SchemaField("place_name", "STRING", mode="REQUIRED"),
-                bigquery.SchemaField("review_id", "STRING", mode="REQUIRED"),
-                bigquery.SchemaField("rating", "INTEGER"),
-                bigquery.SchemaField("review_text", "STRING"),
-                bigquery.SchemaField("published_at", "DATE"),
-                bigquery.SchemaField("user_name", "STRING"),
-                bigquery.SchemaField("user_is_local_guide", "BOOLEAN"),
-                bigquery.SchemaField("user_url", "STRING"),
-                bigquery.SchemaField("extracted_at", "TIMESTAMP"),
-            ],
-        )
-
-    t1 = e_create_external_table_with_partition(
-        RAW_BUCKET, SRC_BLOB_NAME, BQ_SRC_DATASET, TABLE_NAME
+    t1 = e_create_external_table(
+        RAW_BUCKET, SRC_BLOB_NAME, BQ_SRC_DATASET, SRC_TABLE_NAME
     )
-    t2 = t_remove_unused_columns(BQ_SRC_DATASET, TABLE_NAME)
-    t3 = t_remove_all_null_rows(t2)
-    t4 = t_remove_required_null_rows(t3)
-    t5 = t_remove_duplicate_reviews(t4)
-    t6 = t_convert_reveiws_published_datetime(t5)
-    t7 = l_upload_transformed_reviews_to_bq(t6, BQ_ODS_DATASET, TABLE_NAME)
+    t2 = t_process_src_table()
 
     t2.set_upstream(t1)
-    t3.set_upstream(t2)
-    t4.set_upstream(t3)
-    t5.set_upstream(t4)
-    t6.set_upstream(t5)
-    t7.set_upstream(t6)
 
 
 d_gmaps_reviews_src_to_ods()
