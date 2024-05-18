@@ -58,7 +58,9 @@ def d_gmaps_reviews_src_to_ods():
                 ELSE NULL
             END
         );
-        CREATE OR REPLACE TABLE `{BQ_ODS_DATASET}.{ODS_TABLE_NAME}` AS
+        CREATE OR REPLACE TABLE `{BQ_ODS_DATASET}.{ODS_TABLE_NAME}`
+        PARTITION BY `published_at`
+        AS
         SELECT
             `place_name`,
             `review_id`,
