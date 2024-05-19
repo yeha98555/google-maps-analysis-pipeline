@@ -177,6 +177,13 @@ def build_bq_from_gcs(
                 f"Invalid filetype: {filetype}. Please specify 'parquet', 'csv', or 'jsonl'."
             )
 
+        if filetype == "csv":
+            # Set CSV specific options
+            csv_options = bigquery.CsvOptions(
+                skip_leading_rows=1
+            )  # Skip the first row (usually headers)
+            external_config.options = csv_options
+
         external_config.source_uris = [f"gs://{bucket_name}/{blob_name}"]
         if schema:
             external_config.schema = schema
