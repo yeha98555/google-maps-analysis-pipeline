@@ -6,6 +6,7 @@ from google.cloud import bigquery
 from utils.gcp import query_bq_to_df
 
 from airflow.decorators import dag, task
+from airflow.operators.dagrun_operator import TriggerDagRunOperator
 from airflow.providers.docker.operators.docker import DockerOperator
 
 RAW_BUCKET = os.environ.get("GCP_GCS_RAW_BUCKET")
@@ -50,7 +51,7 @@ def d_gmaps_crawler_to_src():
         ]
 
     @task
-    def run_gmaps_crawler(batch: list[dict]):
+    def e_gmaps_crawler(batch: list[dict]):
         for attraction in batch:
             print(f"crawling attraction: {attraction}")
             attraction_name = attraction["attraction_name"]
@@ -83,8 +84,20 @@ def d_gmaps_crawler_to_src():
             )
             crawler_task.execute({})
 
+    trigger_d_gmaps_places_src_to_ods = TriggerDagRunOperator(
+        task_id="trigger_d_gmaps_places_src_to_ods",
+        trigger_dag_id="d_gmaps_places_src_to_ods",
+    )
+
+    trigger_d_gmaps_reviews_src_to_ods = TriggerDagRunOperator(
+        task_id="trigger_d_gmaps_reviews_src_to_ods",
+        trigger_dag_id="d_gmaps_reviews_src_to_ods",
+    )
+
     batches = get_attraction_list()
-    run_gmaps_crawler.expand(batch=batches)
+    crawl_tasks = e_gmaps_crawler.expand(batch=batches)
+    crawl_tasks >> trigger_d_gmaps_places_src_to_ods
+    crawl_tasks >> trigger_d_gmaps_reviews_src_to_ods
 
 
 d_gmaps_crawler_to_src()
