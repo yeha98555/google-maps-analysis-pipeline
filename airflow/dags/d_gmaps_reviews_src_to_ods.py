@@ -9,10 +9,10 @@ from airflow.decorators import dag, task
 
 RAW_BUCKET = os.environ.get("GCP_GCS_RAW_BUCKET")
 current_date = datetime.now().strftime("%Y-%m-%d")
-SRC_BLOB_NAME = "gmaps-taiwan/detailed-reviews/{current_date}/*.parquet"
+SRC_BLOB_NAME = f"gmaps-taiwan/detailed-reviews/{current_date}/*.parquet"
 BQ_SRC_DATASET = os.environ.get("BIGQUERY_SRC_DATASET")
 BQ_ODS_DATASET = os.environ.get("BIGQUERY_ODS_DATASET")
-SRC_TABLE_NAME = "ods-gmaps_reviews"
+SRC_TABLE_NAME = "src-gmaps_reviews"
 ODS_TABLE_NAME = "ods-gmaps_reviews"
 BQ_CLIENT = bigquery.Client()
 
