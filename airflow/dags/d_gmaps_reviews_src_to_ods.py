@@ -69,7 +69,6 @@ def d_gmaps_reviews_src_to_ods():
             `review_text`,
             convertDate(`published_at`, TIMESTAMP(`extracted_at`)) AS `published_at`,
             `user_name`,
-            `user_is_local_guide`,
             `user_url`,
         FROM
           `{BQ_SRC_DATASET}`.`{SRC_TABLE_NAME}`

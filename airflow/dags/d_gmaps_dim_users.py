@@ -34,7 +34,6 @@ def d_gmaps_dim_users():
         CREATE OR REPLACE TABLE `{dest_dataset}`.`{dest_table}` AS
         SELECT DISTINCT
           `user_name`,
-          `user_is_local_guide`,
           `user_url`,
         FROM
           `{src_dataset}`.`{src_table}`
