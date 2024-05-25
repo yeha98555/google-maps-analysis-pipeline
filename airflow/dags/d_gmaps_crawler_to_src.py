@@ -33,7 +33,7 @@ default_args = {
 )
 def d_gmaps_crawler_to_src():
     @task
-    def get_attraction_list() -> list[list[dict]]:
+    def get_attraction_list(top_n: int = 1500) -> list[list[dict]]:
         query = f"""
             SELECT DISTINCT
                 attraction_id,
@@ -41,7 +41,7 @@ def d_gmaps_crawler_to_src():
             FROM
                 `{BQ_ODS_DATASET}`.`ods_tripadvisor_info`
         """
-        df = query_bq_to_df(BQ_CLIENT, query)
+        df = query_bq_to_df(BQ_CLIENT, query)[:top_n]
         attractions = df.to_dict(orient="records")
         # batch
         batch_size = 1024  # default max_map_length is 1024
