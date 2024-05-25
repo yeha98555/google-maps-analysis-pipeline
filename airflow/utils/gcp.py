@@ -178,11 +178,10 @@ def build_bq_from_gcs(
             )
 
         if filetype == "csv":
-            # Set CSV specific options
-            csv_options = bigquery.CsvOptions(
-                skip_leading_rows=1
-            )  # Skip the first row (usually headers)
-            external_config.options = csv_options
+            external_config.options.skip_leading_rows = 1
+            # Check schema becuase csv must provide schema
+            if not schema:
+                raise ValueError("CSV must provide schema")
 
         external_config.source_uris = [f"gs://{bucket_name}/{blob_name}"]
         if schema:
