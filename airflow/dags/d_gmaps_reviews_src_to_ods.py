@@ -6,6 +6,7 @@ from google.cloud import bigquery
 from utils.gcp import build_bq_from_gcs, query_bq
 
 from airflow.decorators import dag, task
+from airflow.operators.dagrun_operator import TriggerDagRunOperator
 
 RAW_BUCKET = os.environ.get("GCP_GCS_RAW_BUCKET")
 current_date = datetime.now().strftime("%Y-%m-%d")
@@ -79,12 +80,30 @@ def d_gmaps_reviews_src_to_ods():
         """
         return query_bq(BQ_CLIENT, query)
 
+    trigger_d_gmaps_dim_time = TriggerDagRunOperator(
+        task_id="trigger_d_gmaps_dim_time",
+        trigger_dag_id="d_gmaps_dim_time",
+    )
+
+    trigger_d_gmaps_dim_users = TriggerDagRunOperator(
+        task_id="trigger_d_gmaps_dim_users",
+        trigger_dag_id="d_gmaps_dim_users",
+    )
+
+    trigger_d_gmaps_fact_reviews = TriggerDagRunOperator(
+        task_id="trigger_d_gmaps_fact_reviews",
+        trigger_dag_id="d_gmaps_fact_reviews",
+    )
+
     t1 = e_create_external_table(
         RAW_BUCKET, SRC_BLOB_NAME, BQ_SRC_DATASET, SRC_TABLE_NAME
     )
     t2 = t_process_src_table()
 
-    t2.set_upstream(t1)
+    t1 >> t2
+    t2 >> trigger_d_gmaps_dim_time
+    t2 >> trigger_d_gmaps_dim_users
+    t2 >> trigger_d_gmaps_fact_reviews
 
 
 d_gmaps_reviews_src_to_ods()
