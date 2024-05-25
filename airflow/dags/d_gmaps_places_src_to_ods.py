@@ -54,50 +54,6 @@ def d_gmaps_places_src_to_ods():
             filetype="jsonl",
         )
 
-    # @task
-    # def t_get_latset_and_second_latest_places_file(
-    #     bucket_name: str, blob_prefix: str
-    # ) -> Tuple[str, str]:
-    #     bucket = GCS_CLIENT.get_bucket(bucket_name)
-    #     blobs = bucket.list_blobs(prefix=blob_prefix)
-
-    #     blobs = sorted(blobs, key=lambda x: x.name)
-    #     return blobs[-1], blobs[-2]
-
-    # @task
-    # def t_compare_places_row_number(
-    #     filename_latest: str, filename_second_latest: str
-    # ) -> pd.DataFrame:
-    #     print(filename_latest, filename_second_latest)
-    #     df_latest = pd.read_csv(filename_latest)
-    #     df_second_latest = pd.read_csv(filename_second_latest)
-
-    #     # 確認最新檔案和第二新的檔案筆數是否相同，如果相同，刪除舊的，如果不相同，保留兩個，回傳筆數多的
-    #     if df_latest.shape[0] == df_second_latest.shape[0]:
-    #         # 搬移舊有的檔案到archive bucket
-    #         t_move_old_places_file_to_archive_bucket(filename_second_latest)
-    #         return df_latest
-    #     else:
-    #         # 如果不相同，保留兩個，回傳筆數多的
-    #         print(
-    #             f"number of rows in latest and second latest are not the same: {df_latest.shape[0]} and {df_second_latest.shape[0]}"
-    #         )
-    #         if df_latest.shape[0] > df_second_latest.shape[0]:
-    #             return df_latest
-    #         else:
-    #             return df_second_latest
-
-    # def t_move_old_places_file_to_archive_bucket(
-    #     bucket_name: str, source_blob_name: str
-    # ):
-    #     # 若相同將除了最新以外的該層資料搬移到archive bucket
-    #     bucket = GCS_CLIENT.get_bucket(bucket_name)
-
-    #     blob = bucket.blob(source_blob_name)
-
-    #     blob.copy_to(f"{ARCHIVE_BUCKET}/{source_blob_name}")
-    #     blob.delete()
-
     @task
     def t_remove_places_columns(df: pd.DataFrame) -> pd.DataFrame:
         df.drop(
