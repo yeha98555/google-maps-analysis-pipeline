@@ -1,17 +1,20 @@
-import os
 from datetime import datetime, timedelta
 
 from google.cloud import bigquery
+from utils.common import load_config
 from utils.gcp import query_bq
 
 from airflow.decorators import dag, task
 from airflow.operators.dummy import DummyOperator
 from airflow.sensors.external_task import ExternalTaskSensor
 
-BQ_DIM_DATASET = os.environ.get("BIGQUERY_DIM_DATASET")
-BQ_FACT_DATASET = os.environ.get("BIGQUERY_FACT_DATASET")
-BQ_MART_DATASET = os.environ.get("BIGQUERY_MART_DATASET")
-TABLE_NAME = "mart-reviews_trends"
+config = load_config()
+BQ_DIM_DATASET = config["gcp"]["bigquery"]["dim_dataset"]
+BQ_FACT_DATASET = config["gcp"]["bigquery"]["fact_dataset"]
+BQ_MART_DATASET = config["gcp"]["bigquery"]["mart_dataset"]
+ODS_TABLE_NAME = "ods-" + config["gcp"]["table"]["gmaps-reviews"]
+MART_TABLE_NAME = "mart-reviews-trends-" + config["env"]
+
 BQ_CLIENT = bigquery.Client()
 
 default_args = {
@@ -60,9 +63,9 @@ def d_gmaps_mart_review_trends():
     all_sensors_complete = DummyOperator(task_id="all_sensors_complete")
 
     @task
-    def l_mart_review_trends(dest_dataset: str, dest_table: str):
+    def l_mart_review_trends():
         query = f"""
-        CREATE OR REPLACE TABLE `{dest_dataset}`.`{dest_table}` AS
+        CREATE OR REPLACE TABLE `{BQ_MART_DATASET}`.`{MART_TABLE_NAME}` AS
         SELECT
           p.`city`,
           p.`region`,
@@ -78,12 +81,12 @@ def d_gmaps_mart_review_trends():
           COUNT(r.`review_id`) AS `total_reviews`,
           ROUND(AVG(r.`rating`), 2) AS `avg_rating`,
         FROM
-          `{BQ_FACT_DATASET}`.`fact-reviews` r
+          `{BQ_FACT_DATASET}`.`{"fact-gmaps-reviews-" + config["env"]}` r
         JOIN
-          `{BQ_DIM_DATASET}`.`dim-reviews_places` p
+          `{BQ_DIM_DATASET}`.`{"dim-gmaps-places-" + config["env"]}` p
           ON r.`place_name` = p.`place_name`
         JOIN
-          `{BQ_DIM_DATASET}`.`dim-reviews_time` t
+          `{BQ_DIM_DATASET}`.`{"dim-time-" + config["env"]}` t
           ON r.`published_at` = t.`date`
         GROUP BY
           p.`city`,
@@ -99,15 +102,12 @@ def d_gmaps_mart_review_trends():
           t.`date`
         """
         query_bq(BQ_CLIENT, query)
-        return f"{dest_table} created."
+        return f"{MART_TABLE_NAME} created."
 
     (
         [wait_for_fact_reviews, wait_for_dim_users, wait_for_dim_time]
         >> all_sensors_complete
-        >> l_mart_review_trends(
-            dest_dataset=BQ_MART_DATASET,
-            dest_table=TABLE_NAME,
-        )
+        >> l_mart_review_trends()
     )
 
 
