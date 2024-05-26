@@ -1,16 +1,18 @@
-import os
 from datetime import datetime, timedelta
 
 import pandas as pd
 from google.cloud import bigquery
+from utils.common import load_config
 from utils.gcp import query_bq
 
 from airflow.decorators import dag, task
 
-BQ_ODS_DATASET = os.environ.get("BIGQUERY_ODS_DATASET")
-BQ_FACT_DATASET = os.environ.get("BIGQUERY_FACT_DATASET")
-ODS_TABLE_NAME = "ods-gmaps_reviews"
-FACT_TABLE_NAME = "fact-reviews"
+config = load_config()
+BQ_ODS_DATASET = config["gcp"]["bigquery"]["ods_dataset"]
+BQ_FACT_DATASET = config["gcp"]["bigquery"]["fact_dataset"]
+ODS_TABLE_NAME = "ods-" + config["gcp"]["table"]["gmaps-reviews"]
+FACT_TABLE_NAME = "fact-gmaps-reviews-" + config["env"]
+
 BQ_CLIENT = bigquery.Client()
 
 default_args = {
@@ -29,11 +31,9 @@ default_args = {
 )
 def d_gmaps_fact_reviews():
     @task
-    def etl_load_reviews(
-        src_dataset: str, src_table: str, dest_dataset: str, dest_table: str
-    ) -> pd.DataFrame:
+    def etl_load_reviews() -> pd.DataFrame:
         query = f"""
-        CREATE OR REPLACE TABLE `{dest_dataset}.{dest_table}`
+        CREATE OR REPLACE TABLE `{BQ_FACT_DATASET}.{FACT_TABLE_NAME}`
         AS
         SELECT DISTINCT
           `review_id`,
@@ -43,11 +43,12 @@ def d_gmaps_fact_reviews():
           `published_at`,
           `review_text`,
         FROM
-          `{src_dataset}`.`{src_table}`
+          `{BQ_ODS_DATASET}`.`{ODS_TABLE_NAME}`
         """
         query_bq(client=BQ_CLIENT, sql_query=query)
+        return f"{FACT_TABLE_NAME} created."
 
-    etl_load_reviews(BQ_ODS_DATASET, ODS_TABLE_NAME, BQ_FACT_DATASET, FACT_TABLE_NAME)
+    etl_load_reviews()
 
 
 d_gmaps_fact_reviews()
