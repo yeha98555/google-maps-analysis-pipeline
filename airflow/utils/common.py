@@ -58,10 +58,10 @@ def add_env_suffix(config: dict) -> dict:
         dict: The configuration dictionary with environment suffix added to table names.
     """
     env_suffix = os.getenv("ENV_SUBFIX", config.get("env", ""))
-    if "gcp" in config and "table_name" in config["gcp"]:
-        for key, value in config["gcp"]["table_name"].items():
+    if "gcp" in config and "table" in config["gcp"]:
+        for key, value in config["gcp"]["table"].items():
             if isinstance(value, str) and not value.startswith("ENV_"):
-                config["gcp"]["table_name"][key] = f"{env_suffix}-{value}"
+                config["gcp"]["table"][key] = f"{env_suffix}-{value}"
     return config
 
 

@@ -4,15 +4,17 @@ gcp:
     raw: ENV_GCP_GCS_RAW_BUCKET
     processed: ENV_GCP_GCS_PROCESSED_BUCKET
     archive: ENV_GCP_GCS_ARCHIVE_BUCKET
-  blob_name:
+  blob:
     gmaps:
+      prefix: "gmaps"
+      places: "gmaps/places/*.jsonl"
       reviews: "gmaps/detailed-reviews/*.parquet"
-      places: "gmaps/attractions/*.parquet"
   bigquery:
+    src_dataset: ENV_BIGQUERY_SRC_DATASET
     ods_dataset: ENV_BIGQUERY_ODS_DATASET
     dim_dataset: ENV_BIGQUERY_DIM_DATASET
     fact_dataset: ENV_BIGQUERY_FACT_DATASET
     mart_dataset: ENV_BIGQUERY_FACT_DATASET
-  table_name:
-    gmaps_places: "gmaps_places"
-    gmaps_reviews: "gmaps_reviews"
+  table:
+    gmaps-places: "gmaps-places"
+    gmaps-reviews: "gmaps-reviews"
