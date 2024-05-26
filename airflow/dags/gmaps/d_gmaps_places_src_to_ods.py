@@ -1,9 +1,9 @@
-import os
 from datetime import datetime, timedelta
 from typing import List
 
 import pandas as pd
 from google.cloud import bigquery, storage
+from utils.common import load_config
 from utils.gcp import (
     build_bq_from_gcs,
     download_df_from_gcs,
@@ -13,13 +13,14 @@ from utils.gcp import (
 from airflow.decorators import dag, task
 from airflow.operators.dagrun_operator import TriggerDagRunOperator
 
-RAW_BUCKET = os.environ.get("GCP_GCS_RAW_BUCKET")
-PROCESSED_BUCKET = os.environ.get("GCP_GCS_PROCESSED_BUCKET")
-ARCHIVE_BUCKET = os.environ.get("GCP_GCS_ARCHIVE_BUCKET")
+config = load_config()
+RAW_BUCKET = config["gcp"]["bucket"]["raw"]
+PROCESSED_BUCKET = config["gcp"]["bucket"]["processed"]
+BQ_ODS_DATASET = config["gcp"]["bigquery"]["ods_dataset"]
 current_date = datetime.now().strftime("%Y-%m-%d")
-BLOB_NAME = f"gmaps-taiwan/places/{current_date}/"
-BQ_ODS_DATASET = os.environ.get("BIGQUERY_ODS_DATASET")
-ODS_TABLE_NAME = "ods-gmaps_places-test2"
+BLOB_NAME = f"{config["gcp"]["blob"]["gmaps"]["places"]}/{current_date}/"
+ODS_TABLE_NAME = "ods-" + config["gcp"]["table"]["gmaps-places"]
+
 GCS_CLIENT = storage.Client()
 BQ_CLIENT = bigquery.Client()
 
@@ -47,11 +48,10 @@ default_args = {
 )
 def d_gmaps_places_src_to_ods():
     @task
-    def e_get_places_bloblist(bucket_name: str, blob_prefix: str) -> List[List[str]]:
-        blobs = storage.Client().list_blobs(bucket_name, prefix=blob_prefix)
+    def e_get_places_bloblist() -> List[List[str]]:
+        blobs = storage.Client().list_blobs(RAW_BUCKET, prefix=BLOB_NAME)
         sorted_blobs = sorted(blobs, key=lambda x: x.name)
         blob_names = [blob.name for blob in sorted_blobs]
-
         batch_size = 200  # default max_map_length is 1024
         blob_batches = [
             blob_names[i : i + batch_size]
@@ -137,15 +137,13 @@ def d_gmaps_places_src_to_ods():
         )
 
     @task
-    def l_create_bq_external_table(
-        bucket_name: str, blob_name: str, dataset_name: str, table_name: str
-    ) -> bool:
+    def l_create_bq_external_table() -> bool:
         build_bq_from_gcs(
             client=BQ_CLIENT,
-            bucket_name=bucket_name,
-            blob_name=blob_name,
-            dataset_name=dataset_name,
-            table_name=table_name,
+            bucket_name=PROCESSED_BUCKET,
+            blob_name=BLOB_NAME + "*.jsonl",
+            dataset_name=BQ_ODS_DATASET,
+            table_name=ODS_TABLE_NAME,
             schema=[
                 bigquery.SchemaField("place_id", "STRING", mode="REQUIRED"),
                 bigquery.SchemaField("place_id_raw", "STRING", mode="REQUIRED"),
@@ -398,14 +396,9 @@ def d_gmaps_places_src_to_ods():
         trigger_dag_id="d_gmaps_dim_places",
     )
 
-    blob_batches = e_get_places_bloblist(RAW_BUCKET, BLOB_NAME)
+    blob_batches = e_get_places_bloblist()
     t1 = et_get_places_df_from_gcs.expand(blob_batch=blob_batches)
-    t2 = l_create_bq_external_table(
-        bucket_name=PROCESSED_BUCKET,
-        blob_name=BLOB_NAME + "*.jsonl",
-        dataset_name=BQ_ODS_DATASET,
-        table_name=ODS_TABLE_NAME,
-    )
+    t2 = l_create_bq_external_table()
 
     t1 >> t2 >> trigger_d_gmaps_dim_places
 
