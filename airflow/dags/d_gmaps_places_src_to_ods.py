@@ -78,6 +78,7 @@ def d_gmaps_places_src_to_ods():
             "plus_code",
             "data_id",
             "reviews_per_rating",
+            "closed_on",
         ]
         # Check if all columns are present
         if not all(col in df.columns for col in columns_to_select):
@@ -124,9 +125,9 @@ def d_gmaps_places_src_to_ods():
             df = t_rename_columns(df)
 
             # Upload to GCS
-            l_upload_transformed_places_to_gcs(df=df, blob_name=blob_name)
+            l_upload_transformed_places_to_gcs(df, blob_name)
 
-    @task
+    # @task
     def l_upload_transformed_places_to_gcs(df: pd.DataFrame, blob_name: str) -> bool:
         upload_df_to_gcs(
             client=GCS_CLIENT,
@@ -159,7 +160,6 @@ def d_gmaps_places_src_to_ods():
                 bigquery.SchemaField("categories", "STRING", mode="REPEATED"),
                 bigquery.SchemaField("google_place_url", "STRING", mode="REQUIRED"),
                 bigquery.SchemaField("workday_timing", "STRING"),
-                bigquery.SchemaField("closed_on", "STRING", mode="REPEATED"),
                 bigquery.SchemaField("address", "STRING"),
                 bigquery.SchemaField(
                     "review_keywords",
@@ -214,8 +214,24 @@ def d_gmaps_places_src_to_ods():
                         bigquery.SchemaField("source", "STRING"),
                     ],
                 ),
-                bigquery.SchemaField("reservations", "STRING", mode="REPEATED"),
-                bigquery.SchemaField("order_online_links", "STRING", mode="REPEATED"),
+                bigquery.SchemaField(
+                    "reservations",
+                    "RECORD",
+                    mode="REPEATED",
+                    fields=[
+                        bigquery.SchemaField("link", "STRING"),
+                        bigquery.SchemaField("source", "STRING"),
+                    ],
+                ),
+                bigquery.SchemaField(
+                    "order_online_links",
+                    "RECORD",
+                    mode="REPEATED",
+                    fields=[
+                        bigquery.SchemaField("link", "STRING"),
+                        bigquery.SchemaField("source", "STRING"),
+                    ],
+                ),
                 bigquery.SchemaField(
                     "about",
                     "RECORD",
@@ -386,8 +402,8 @@ def d_gmaps_places_src_to_ods():
     blob_batches = e_get_places_bloblist(RAW_BUCKET, BLOB_NAME)
     t1 = et_get_places_df_from_gcs.expand(blob_batch=blob_batches)
     t2 = l_create_bq_external_table(
-        bucket_name=RAW_BUCKET,
-        blob_name=BLOB_NAME,
+        bucket_name=PROCESSED_BUCKET,
+        blob_name=BLOB_NAME + "*.jsonl",
         dataset_name=BQ_ODS_DATASET,
         table_name=ODS_TABLE_NAME,
     )
