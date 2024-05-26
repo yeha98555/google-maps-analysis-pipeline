@@ -42,7 +42,7 @@ def d_gmaps_crawler_to_src():
                 attraction_id,
                 attraction_name
             FROM
-                `{BQ_ODS_DATASET}`.`ods_tripadvisor_info`
+                `{BQ_ODS_DATASET}.ods_tripadvisor_info`
         """
         df = query_bq_to_df(BQ_CLIENT, query)[:top_n]
         # random df to avoid task 1 always crawler the attraction with more reviews

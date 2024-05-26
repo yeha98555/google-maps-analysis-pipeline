@@ -72,7 +72,7 @@ def d_gmaps_reviews_src_to_ods():
             `user_name`,
             `user_url`,
         FROM
-          `{BQ_SRC_DATASET}`.`{SRC_TABLE_NAME}`
+          `{BQ_SRC_DATASET}.{SRC_TABLE_NAME}`
         WHERE
             `place_name` IS NOT NULL
             AND `review_id` IS NOT NULL

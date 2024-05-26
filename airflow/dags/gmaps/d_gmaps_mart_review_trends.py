@@ -68,7 +68,7 @@ def d_gmaps_mart_review_trends():
     @task
     def l_mart_review_trends():
         query = f"""
-        CREATE OR REPLACE TABLE `{BQ_MART_DATASET}`.`{MART_TABLE_NAME}` AS
+        CREATE OR REPLACE TABLE `{BQ_MART_DATASET}.{MART_TABLE_NAME}` AS
         SELECT
           p.`city`,
           p.`region`,
@@ -84,12 +84,12 @@ def d_gmaps_mart_review_trends():
           COUNT(r.`review_id`) AS `total_reviews`,
           ROUND(AVG(r.`rating`), 2) AS `avg_rating`,
         FROM
-          `{BQ_FACT_DATASET}`.`{fact_reviews_table}` r
+          `{BQ_FACT_DATASET}.{fact_reviews_table}` r
         JOIN
-          `{BQ_DIM_DATASET}`.`{dim_places_table}` p
+          `{BQ_DIM_DATASET}.{dim_places_table}` p
           ON r.`place_name` = p.`place_name`
         JOIN
-          `{BQ_DIM_DATASET}`.`{dim_time_table}` t
+          `{BQ_DIM_DATASET}.{dim_time_table}` t
           ON r.`published_at` = t.`date`
         GROUP BY
           p.`city`,

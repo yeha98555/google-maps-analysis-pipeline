@@ -32,7 +32,7 @@ def d_gmaps_dim_time():
     @task
     def l_dim_time():
         query = f"""
-        CREATE OR REPLACE TABLE `{BQ_DIM_DATASET}`.`{DIM_TABLE_NAME}` AS
+        CREATE OR REPLACE TABLE `{BQ_DIM_DATASET}.{DIM_TABLE_NAME}` AS
         SELECT
           DISTINCT
           `published_at` AS date,
@@ -46,7 +46,7 @@ def d_gmaps_dim_time():
             WHEN EXTRACT(MONTH FROM `published_at`) IN (10, 11, 12) THEN 4
           END AS quarter
         FROM
-          `{BQ_ODS_DATASET}`.`{ODS_TABLE_NAME}`
+          `{BQ_ODS_DATASET}.{ODS_TABLE_NAME}`
         """
         query_bq(BQ_CLIENT, query)
         return f"{DIM_TABLE_NAME} created."

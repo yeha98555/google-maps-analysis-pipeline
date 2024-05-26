@@ -32,7 +32,7 @@ def d_gmaps_dim_places():
     @task
     def l_dim_places():
         query = f"""
-        CREATE OR REPLACE TABLE `{BQ_DIM_DATASET}`.`{DIM_TABLE_NAME}` AS
+        CREATE OR REPLACE TABLE `{BQ_DIM_DATASET}.{DIM_TABLE_NAME}` AS
         SELECT DISTINCT
           `place_id`,
           `place_name`,
@@ -45,7 +45,7 @@ def d_gmaps_dim_places():
           `google_place_url`,
           `main_category`,
         FROM
-          `{BQ_ODS_DATASET}`.`{ODS_TABLE_NAME}`
+          `{BQ_ODS_DATASET}.{ODS_TABLE_NAME}`
         """
         query_bq(BQ_CLIENT, query)
         return f"{DIM_TABLE_NAME} created."

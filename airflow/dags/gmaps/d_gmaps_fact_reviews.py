@@ -44,7 +44,7 @@ def d_gmaps_fact_reviews():
           `published_at`,
           `review_text`,
         FROM
-          `{BQ_ODS_DATASET}`.`{ODS_TABLE_NAME}`
+          `{BQ_ODS_DATASET}.{ODS_TABLE_NAME}`
         """
         query_bq(client=BQ_CLIENT, sql_query=query)
         return f"{FACT_TABLE_NAME} created."

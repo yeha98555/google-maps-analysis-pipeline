@@ -32,12 +32,12 @@ def d_gmaps_dim_users():
     @task
     def l_dim_users():
         query = f"""
-        CREATE OR REPLACE TABLE `{BQ_DIM_DATASET}`.`{DIM_TABLE_NAME}` AS
+        CREATE OR REPLACE TABLE `{BQ_DIM_DATASET}.{DIM_TABLE_NAME}` AS
         SELECT DISTINCT
           `user_name`,
           `user_url`,
         FROM
-          `{BQ_ODS_DATASET}`.`{ODS_TABLE_NAME}`
+          `{BQ_ODS_DATASET}.{ODS_TABLE_NAME}`
         """
         query_bq(BQ_CLIENT, query)
         return f"{DIM_TABLE_NAME} created."
