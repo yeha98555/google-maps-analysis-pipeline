@@ -1,20 +1,23 @@
-import os
 from datetime import datetime, timedelta
 
 import pandas as pd
 from google.cloud import bigquery
+from utils.common import load_config
 from utils.gcp import build_bq_from_gcs, query_bq
 
 from airflow.decorators import dag, task
 from airflow.operators.dagrun_operator import TriggerDagRunOperator
 
-RAW_BUCKET = os.environ.get("GCP_GCS_RAW_BUCKET")
+config = load_config()
+RAW_BUCKET = config["gcp"]["bucket"]["raw"]
+BQ_SRC_DATASET = config["gcp"]["bigquery"]["src_dataset"]
+BQ_ODS_DATASET = config["gcp"]["bigquery"]["ods_dataset"]
 current_date = datetime.now().strftime("%Y-%m-%d")
-SRC_BLOB_NAME = f"gmaps-taiwan/detailed-reviews/{current_date}/*.parquet"
-BQ_SRC_DATASET = os.environ.get("BIGQUERY_SRC_DATASET")
-BQ_ODS_DATASET = os.environ.get("BIGQUERY_ODS_DATASET")
-SRC_TABLE_NAME = "src-gmaps_reviews"
-ODS_TABLE_NAME = "ods-gmaps_reviews"
+SRC_BLOB_NAME = f"{config["gcp"]["blob"]["gmaps"]["reviews"]}/{current_date}/*.parquet"
+TABLE_NAME = config["gcp"]["table"]["gmaps-reviews"]
+SRC_TABLE_NAME = "src-" + TABLE_NAME
+ODS_TABLE_NAME = "ods-" + TABLE_NAME
+
 BQ_CLIENT = bigquery.Client()
 
 default_args = {
@@ -33,15 +36,13 @@ default_args = {
 )
 def d_gmaps_reviews_src_to_ods():
     @task
-    def e_create_external_table(
-        bucket_name: str, blob_name: str, dataset_name: str, table_name: str
-    ):
+    def e_create_external_table():
         build_bq_from_gcs(
             client=BQ_CLIENT,
-            dataset_name=dataset_name,
-            table_name=table_name,
-            bucket_name=bucket_name,
-            blob_name=blob_name,
+            dataset_name=BQ_SRC_DATASET,
+            table_name=SRC_TABLE_NAME,
+            bucket_name=RAW_BUCKET,
+            blob_name=SRC_BLOB_NAME,
         )
 
     @task
@@ -94,9 +95,7 @@ def d_gmaps_reviews_src_to_ods():
         trigger_dag_id="d_gmaps_fact_reviews",
     )
 
-    t1 = e_create_external_table(
-        RAW_BUCKET, SRC_BLOB_NAME, BQ_SRC_DATASET, SRC_TABLE_NAME
-    )
+    t1 = e_create_external_table()
     t2 = t_process_src_table()
 
     t1 >> t2
