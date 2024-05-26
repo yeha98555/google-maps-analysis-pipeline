@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 
 from google.cloud import bigquery
-from utils.common import load_config
+from utils.common import load_config, table_name_with_env
 from utils.gcp import query_bq
 
 from airflow.decorators import dag, task
@@ -13,7 +13,10 @@ BQ_DIM_DATASET = config["gcp"]["bigquery"]["dim_dataset"]
 BQ_FACT_DATASET = config["gcp"]["bigquery"]["fact_dataset"]
 BQ_MART_DATASET = config["gcp"]["bigquery"]["mart_dataset"]
 ODS_TABLE_NAME = "ods-" + config["gcp"]["table"]["gmaps-reviews"]
-MART_TABLE_NAME = "mart-reviews-trends-" + config["env"]
+fact_reviews_table = table_name_with_env("fact-gmaps-reviews", config["env"])
+dim_places_table = table_name_with_env("dim-gmaps-places", config["env"])
+dim_time_table = table_name_with_env("dim-time", config["env"])
+MART_TABLE_NAME = table_name_with_env("mart-reviews-trends", config["env"])
 
 BQ_CLIENT = bigquery.Client()
 
@@ -81,12 +84,12 @@ def d_gmaps_mart_review_trends():
           COUNT(r.`review_id`) AS `total_reviews`,
           ROUND(AVG(r.`rating`), 2) AS `avg_rating`,
         FROM
-          `{BQ_FACT_DATASET}`.`{"fact-gmaps-reviews-" + config["env"]}` r
+          `{BQ_FACT_DATASET}`.`{fact_reviews_table}` r
         JOIN
-          `{BQ_DIM_DATASET}`.`{"dim-gmaps-places-" + config["env"]}` p
+          `{BQ_DIM_DATASET}`.`{dim_places_table}` p
           ON r.`place_name` = p.`place_name`
         JOIN
-          `{BQ_DIM_DATASET}`.`{"dim-time-" + config["env"]}` t
+          `{BQ_DIM_DATASET}`.`{dim_time_table}` t
           ON r.`published_at` = t.`date`
         GROUP BY
           p.`city`,

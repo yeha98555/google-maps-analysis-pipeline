@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 
 import pandas as pd
 from google.cloud import bigquery
-from utils.common import load_config
+from utils.common import load_config, table_name_with_env
 from utils.gcp import query_bq
 
 from airflow.decorators import dag, task
@@ -11,7 +11,7 @@ config = load_config()
 BQ_ODS_DATASET = config["gcp"]["bigquery"]["ods_dataset"]
 BQ_FACT_DATASET = config["gcp"]["bigquery"]["fact_dataset"]
 ODS_TABLE_NAME = "ods-" + config["gcp"]["table"]["gmaps-reviews"]
-FACT_TABLE_NAME = "fact-gmaps-reviews-" + config["env"]
+FACT_TABLE_NAME = table_name_with_env("fact-gmaps-reviews", config["env"])
 
 BQ_CLIENT = bigquery.Client()
 

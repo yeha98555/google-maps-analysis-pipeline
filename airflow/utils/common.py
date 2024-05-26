@@ -63,7 +63,9 @@ def add_env_suffix(config: dict) -> dict:
         if "table" in config["gcp"]:
             for key, value in config["gcp"]["table"].items():
                 if isinstance(value, str) and not value.startswith("ENV_"):
-                    config["gcp"]["table"][key] = f"{value}-{env_suffix}"
+                    config["gcp"]["table"][key] = (
+                        f"{value}-{env_suffix}" if env_suffix else value
+                    )
 
         # Add suffix to blob prefixes and update all paths
         if "blob" in config["gcp"]:
@@ -73,7 +75,11 @@ def add_env_suffix(config: dict) -> dict:
                     if isinstance(
                         original_prefix, str
                     ) and not original_prefix.startswith("ENV_"):
-                        new_prefix = f"{original_prefix}-{env_suffix}"
+                        new_prefix = (
+                            f"{original_prefix}-{env_suffix}"
+                            if env_suffix
+                            else original_prefix
+                        )
                         blob_info["prefix"] = new_prefix
                         # Update all paths under this blob
                         for path_key, path_value in blob_info.items():
@@ -104,3 +110,7 @@ def load_config() -> dict:
     config = add_env_suffix(config)
 
     return config
+
+
+def table_name_with_env(base_name, env):
+    return f"{base_name}-{env}" if env else base_name

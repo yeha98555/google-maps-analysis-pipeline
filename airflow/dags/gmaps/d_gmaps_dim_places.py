@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 
 from google.cloud import bigquery
-from utils.common import load_config
+from utils.common import load_config, table_name_with_env
 from utils.gcp import query_bq
 
 from airflow.decorators import dag, task
@@ -10,7 +10,7 @@ config = load_config()
 BQ_ODS_DATASET = config["gcp"]["bigquery"]["ods_dataset"]
 BQ_DIM_DATASET = config["gcp"]["bigquery"]["dim_dataset"]
 ODS_TABLE_NAME = "ods-" + config["gcp"]["table"]["gmaps-places"]
-DIM_TABLE_NAME = "dim-gmaps-places-" + config["env"]
+DIM_TABLE_NAME = table_name_with_env("dim-gmaps-places", config["env"])
 
 BQ_CLIENT = bigquery.Client()
 
