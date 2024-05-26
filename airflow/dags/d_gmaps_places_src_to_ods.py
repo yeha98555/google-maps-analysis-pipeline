@@ -19,7 +19,7 @@ ARCHIVE_BUCKET = os.environ.get("GCP_GCS_ARCHIVE_BUCKET")
 current_date = datetime.now().strftime("%Y-%m-%d")
 BLOB_NAME = f"gmaps-taiwan/places/{current_date}/"
 BQ_ODS_DATASET = os.environ.get("BIGQUERY_ODS_DATASET")
-ODS_TABLE_NAME = "ods-gmaps_places"
+ODS_TABLE_NAME = "ods-gmaps_places-test2"
 GCS_CLIENT = storage.Client()
 BQ_CLIENT = bigquery.Client()
 
@@ -77,7 +77,6 @@ def d_gmaps_places_src_to_ods():
             "owner",
             "plus_code",
             "data_id",
-            "reviews_per_rating",
             "closed_on",
         ]
         # Check if all columns are present
@@ -174,17 +173,17 @@ def d_gmaps_places_src_to_ods():
                 bigquery.SchemaField("status", "STRING"),
                 bigquery.SchemaField("price_range", "STRING"),
                 bigquery.SchemaField("reviews_link", "STRING"),
-                # bigquery.SchemaField(
-                #     "reviews_per_rating",
-                #     "RECORD",
-                #     fields=[
-                #         bigquery.SchemaField("1", "INTEGER"),
-                #         bigquery.SchemaField("2", "INTEGER"),
-                #         bigquery.SchemaField("3", "INTEGER"),
-                #         bigquery.SchemaField("4", "INTEGER"),
-                #         bigquery.SchemaField("5", "INTEGER"),
-                #     ],
-                # ),
+                bigquery.SchemaField(
+                    "reviews_per_rating",
+                    "RECORD",
+                    fields=[
+                        bigquery.SchemaField("rating_1", "INTEGER"),
+                        bigquery.SchemaField("rating_2", "INTEGER"),
+                        bigquery.SchemaField("rating_3", "INTEGER"),
+                        bigquery.SchemaField("rating_4", "INTEGER"),
+                        bigquery.SchemaField("rating_5", "INTEGER"),
+                    ],
+                ),
                 bigquery.SchemaField(
                     "coordinates",
                     "RECORD",
