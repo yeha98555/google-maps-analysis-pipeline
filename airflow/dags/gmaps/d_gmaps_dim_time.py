@@ -1,14 +1,17 @@
-import os
 from datetime import datetime, timedelta
 
 from google.cloud import bigquery
+from utils.common import load_config
 from utils.gcp import query_bq
 
 from airflow.decorators import dag, task
 
-BQ_ODS_DATASET = os.environ.get("BIGQUERY_ODS_DATASET")
-BQ_DIM_DATASET = os.environ.get("BIGQUERY_DIM_DATASET")
-TABLE_NAME = "ods-gmaps_reviews"
+config = load_config()
+BQ_ODS_DATASET = config["gcp"]["bigquery"]["ods_dataset"]
+BQ_DIM_DATASET = config["gcp"]["bigquery"]["dim_dataset"]
+ODS_TABLE_NAME = "ods-" + config["gcp"]["table"]["gmaps-reviews"]
+DIM_TABLE_NAME = "dim-time-" + config["env"]
+
 BQ_CLIENT = bigquery.Client()
 
 default_args = {
@@ -27,11 +30,9 @@ default_args = {
 )
 def d_gmaps_dim_time():
     @task
-    def l_dim_time(
-        src_dataset: str, src_table: str, dest_dataset: str, dest_table: str
-    ):
+    def l_dim_time():
         query = f"""
-        CREATE OR REPLACE TABLE `{dest_dataset}`.`{dest_table}` AS
+        CREATE OR REPLACE TABLE `{BQ_DIM_DATASET}`.`{DIM_TABLE_NAME}` AS
         SELECT
           DISTINCT
           `published_at` AS date,
@@ -45,17 +46,12 @@ def d_gmaps_dim_time():
             WHEN EXTRACT(MONTH FROM `published_at`) IN (10, 11, 12) THEN 4
           END AS quarter
         FROM
-          `{src_dataset}`.`{src_table}`
+          `{BQ_ODS_DATASET}`.`{ODS_TABLE_NAME}`
         """
         query_bq(BQ_CLIENT, query)
-        return "dim-time created."
+        return f"{DIM_TABLE_NAME} created."
 
-    l_dim_time(
-        src_dataset=BQ_ODS_DATASET,
-        src_table=TABLE_NAME,
-        dest_dataset=BQ_DIM_DATASET,
-        dest_table="dim-reviews_time",
-    )
+    l_dim_time()
 
 
 d_gmaps_dim_time()
