@@ -3,14 +3,17 @@ from datetime import datetime, timedelta
 
 from docker.types import Mount
 from google.cloud import bigquery
+from utils.common import load_config
 from utils.gcp import query_bq_to_df
 
 from airflow.decorators import dag, task
 from airflow.operators.dagrun_operator import TriggerDagRunOperator
 from airflow.providers.docker.operators.docker import DockerOperator
 
-RAW_BUCKET = os.environ.get("GCP_GCS_RAW_BUCKET")
-BQ_ODS_DATASET = os.environ.get("BIGQUERY_ODS_DATASET")
+config = load_config()
+RAW_BUCKET = config["gcp"]["bucket"]["raw"]
+BQ_ODS_DATASET = config["gcp"]["bigquery"]["ods_dataset"]
+BLOB_NAME = config["gcp"]["blob"]["gmaps"]["prefix"]
 CRAWER_GOOGLE_CREDENTIALS_LOCAL_PATH = os.environ.get(
     "CRAWER_GOOGLE_CREDENTIALS_LOCAL_PATH"
 )
@@ -27,7 +30,7 @@ default_args = {
 
 @dag(
     default_args=default_args,
-    schedule_interval=None,  # "@daily",
+    schedule_interval="@daily",
     catchup=False,
     tags=["gmaps"],
 )
@@ -67,7 +70,7 @@ def d_gmaps_crawler_to_src():
                     "ATTRACTION_ID": attraction_id,
                     "ATTRACTION_NAME": attraction_name,
                     "GCS_BUCKET_NAME": RAW_BUCKET,
-                    "GCS_BLOB_NAME": "gmaps-taiwan",
+                    "GCS_BLOB_NAME": BLOB_NAME,
                 },
                 command="make run",
                 mounts=[
