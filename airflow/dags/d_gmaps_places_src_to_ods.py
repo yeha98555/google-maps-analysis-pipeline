@@ -1,27 +1,35 @@
 import os
 from datetime import datetime, timedelta
+from typing import List
 
-import numpy as np
 import pandas as pd
 from google.cloud import bigquery, storage
-from utils.common import mapping_place_id
 from utils.gcp import (
     build_bq_from_gcs,
     download_df_from_gcs,
-    query_bq_to_df,
     upload_df_to_gcs,
 )
 
 from airflow.decorators import dag, task
+from airflow.operators.dagrun_operator import TriggerDagRunOperator
 
 RAW_BUCKET = os.environ.get("GCP_GCS_RAW_BUCKET")
 PROCESSED_BUCKET = os.environ.get("GCP_GCS_PROCESSED_BUCKET")
 ARCHIVE_BUCKET = os.environ.get("GCP_GCS_ARCHIVE_BUCKET")
-BLOB_NAME = "gmaps/places"
+current_date = datetime.now().strftime("%Y-%m-%d")
+BLOB_NAME = f"gmaps-taiwan/places/{current_date}/"
 BQ_ODS_DATASET = os.environ.get("BIGQUERY_ODS_DATASET")
 ODS_TABLE_NAME = "ods-gmaps_places"
 GCS_CLIENT = storage.Client()
 BQ_CLIENT = bigquery.Client()
+
+default_args = {
+    "owner": "airflow",
+    "start_date": datetime(2024, 5, 1),
+    "retries": 1,
+    "retry_delay": timedelta(minutes=5),
+}
+
 
 default_args = {
     "owner": "airflow",
@@ -39,43 +47,55 @@ default_args = {
 )
 def d_gmaps_places_src_to_ods():
     @task
-    def t_get_latest_places_blobname(bucket_name: str, blob_prefix: str) -> str:
+    def e_get_places_bloblist(bucket_name: str, blob_prefix: str) -> List[List[str]]:
         blobs = storage.Client().list_blobs(bucket_name, prefix=blob_prefix)
-        blobs = sorted(blobs, key=lambda x: x.name)
-        print(f"blob name: {blobs[-1].name}")
-        return blobs[-1].name
+        sorted_blobs = sorted(blobs, key=lambda x: x.name)
+        blob_names = [blob.name for blob in sorted_blobs]
 
-    @task
-    def t_get_places_df_from_gcs(bucket_name: str, blob_name: str) -> pd.DataFrame:
-        return download_df_from_gcs(
-            client=GCS_CLIENT,
-            bucket_name=bucket_name,
-            blob_name=blob_name,
-            filetype="jsonl",
-        )
+        batch_size = 200  # default max_map_length is 1024
+        blob_batches = [
+            blob_names[i : i + batch_size]
+            for i in range(0, len(blob_names), batch_size)
+        ]
+        return blob_batches
 
-    @task
-    def t_remove_places_columns(df: pd.DataFrame) -> pd.DataFrame:
-        df.drop(
-            columns=[
-                "status",
-                "featured_question",
-                "cid",
-                "phone",
-                "owner",
-                "plus_code",
-                "data_id",
-                "reviews_per_rating",
-            ],
-            inplace=True,
-        )
+    def t_convert_place_id(df: pd.DataFrame, place_id: str) -> pd.DataFrame:
+        if "place_id" not in df.columns:
+            print("place_id not in columns")
+            print(df)
+        else:
+            df["place_id_raw"] = df["place_id"]
+        df["place_id"] = place_id
         return df
 
-    @task
-    def t_rename_places_columns(df: pd.DataFrame) -> pd.DataFrame:
+    def t_remove_unused_columns(df: pd.DataFrame) -> pd.DataFrame:
+        columns_to_select = [
+            "status",
+            "featured_question",
+            "cid",
+            "phone",
+            "owner",
+            "plus_code",
+            "data_id",
+            "reviews_per_rating",
+        ]
+        # Check if all columns are present
+        if not all(col in df.columns for col in columns_to_select):
+            print(
+                "Missing columns:",
+                [col for col in columns_to_select if col not in df.columns],
+            )
+            print(df)
+        else:
+            df.drop(
+                columns=columns_to_select,
+                inplace=True,
+            )
+        return df
+
+    def t_rename_columns(df: pd.DataFrame) -> pd.DataFrame:
         df.rename(
             columns={
-                "place_id": "place_id_raw",
                 "name": "place_name",
                 "link": "google_place_url",
                 "reviews": "total_reviews",
@@ -86,61 +106,31 @@ def d_gmaps_places_src_to_ods():
         return df
 
     @task
-    def e_download_gmaps_places_from_gcs() -> pd.DataFrame:
-        query = f"""
-        SELECT
-            attraction_id,
-            attraction_name,
-        FROM `{BQ_ODS_DATASET}.ods_tripadvisor_info`
-        """
-        return query_bq_to_df(BQ_CLIENT, query)
+    def et_get_places_df_from_gcs(blob_batch: List[str]) -> pd.DataFrame:
+        for blob_name in blob_batch:
+            df = download_df_from_gcs(
+                client=GCS_CLIENT,
+                bucket_name=RAW_BUCKET,
+                blob_name=blob_name,
+                filetype="jsonl",
+            )
+            # Add place_id
+            df = t_convert_place_id(
+                df=df, place_id=blob_name.split("/")[-1].split(".")[0]
+            )
+            # Remove unused columns
+            df = t_remove_unused_columns(df)
+            # Rename columns
+            df = t_rename_columns(df)
+
+            # Upload to GCS
+            l_upload_transformed_places_to_gcs(df=df, blob_name=blob_name)
 
     @task
-    def t_convert_place_id(
-        df: pd.DataFrame, df_tripadvisor: pd.DataFrame
-    ) -> pd.DataFrame:
-        df["place_id"] = df["place_name"].apply(
-            lambda x: mapping_place_id(x, df_tripadvisor)
-        )
-        return df
-
-    @task
-    def t_convert_closed_on_to_list(df: pd.DataFrame) -> pd.DataFrame:
-        df["closed_on"] = df["closed_on"].apply(
-            lambda x: x if isinstance(x, list) else [x]
-        )
-        return df
-
-    @task
-    def t_convert_categories_to_list(df: pd.DataFrame) -> pd.DataFrame:
-        df["categories"] = df["categories"].apply(
-            lambda x: x if isinstance(x, list) else [x]
-        )
-        return df
-
-    @task
-    def t_convert_most_popular_times_null(df: pd.DataFrame) -> pd.DataFrame:
-        # if "Not Present" in most_popular_times, replace it with NaN
-        df["most_popular_times"] = df["most_popular_times"].apply(
-            lambda x: x if x != "Not Present" else np.nan
-        )
-        return df
-
-    @task
-    def t_convert_popular_times_null(df: pd.DataFrame) -> pd.DataFrame:
-        # if "Not Present" in popular_times, replace it with NaN
-        df["popular_times"] = df["popular_times"].apply(
-            lambda x: x if x != "Not Present" else np.nan
-        )
-        return df
-
-    @task
-    def l_upload_transformed_places_to_gcs(
-        df: pd.DataFrame, bucket_name: str, blob_name: str
-    ) -> bool:
+    def l_upload_transformed_places_to_gcs(df: pd.DataFrame, blob_name: str) -> bool:
         upload_df_to_gcs(
             client=GCS_CLIENT,
-            bucket_name=bucket_name,
+            bucket_name=PROCESSED_BUCKET,
             blob_name=blob_name,
             df=df,
             filetype="jsonl",
@@ -388,24 +378,21 @@ def d_gmaps_places_src_to_ods():
             filetype="jsonl",
         )
 
-    t1 = t_get_latest_places_blobname(RAW_BUCKET, BLOB_NAME)
-    t2 = t_get_places_df_from_gcs(RAW_BUCKET, t1)
-    t3 = t_remove_places_columns(t2)
-    t4 = t_rename_places_columns(t3)
-    t5 = e_download_gmaps_places_from_gcs()
-    t6 = t_convert_place_id(t4, t5)
-    t7 = t_convert_closed_on_to_list(t6)
-    t8 = t_convert_categories_to_list(t7)
-    t9 = t_convert_most_popular_times_null(t8)
-    t10 = t_convert_popular_times_null(t9)
-    t11 = l_upload_transformed_places_to_gcs(
-        t10, PROCESSED_BUCKET, f"{BLOB_NAME}.jsonl"
-    )
-    t12 = l_create_bq_external_table(
-        PROCESSED_BUCKET, f"{BLOB_NAME}.jsonl", BQ_ODS_DATASET, ODS_TABLE_NAME
+    trigger_d_gmaps_dim_places = TriggerDagRunOperator(
+        task_id="trigger_d_gmaps_dim_places",
+        trigger_dag_id="d_gmaps_dim_places",
     )
 
-    t11 >> t12
+    blob_batches = e_get_places_bloblist(RAW_BUCKET, BLOB_NAME)
+    t1 = et_get_places_df_from_gcs.expand(blob_batch=blob_batches)
+    t2 = l_create_bq_external_table(
+        bucket_name=RAW_BUCKET,
+        blob_name=BLOB_NAME,
+        dataset_name=BQ_ODS_DATASET,
+        table_name=ODS_TABLE_NAME,
+    )
+
+    t1 >> t2 >> trigger_d_gmaps_dim_places
 
 
-d_gmaps_places_src_to_ods()
+dag_instance = d_gmaps_places_src_to_ods()
