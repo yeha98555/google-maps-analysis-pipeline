@@ -34,6 +34,7 @@ def d_gmaps_fact_reviews():
     def etl_load_reviews() -> pd.DataFrame:
         query = f"""
         CREATE OR REPLACE TABLE `{BQ_FACT_DATASET}.{FACT_TABLE_NAME}`
+        PARTITION BY `published_at`
         AS
         SELECT DISTINCT
           `review_id`,
