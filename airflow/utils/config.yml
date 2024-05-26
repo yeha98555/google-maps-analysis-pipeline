@@ -7,8 +7,8 @@ gcp:
   blob:
     gmaps:
       prefix: "gmaps"
-      places: "gmaps/places/*.jsonl"
-      reviews: "gmaps/detailed-reviews/*.parquet"
+      places: "places"
+      reviews: "detailed-reviews"
   bigquery:
     src_dataset: ENV_BIGQUERY_SRC_DATASET
     ods_dataset: ENV_BIGQUERY_ODS_DATASET
