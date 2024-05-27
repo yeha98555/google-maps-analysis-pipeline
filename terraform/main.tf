@@ -209,7 +209,7 @@ resource "google_cloudfunctions2_function_iam_member" "emotion_analyzer_invoker"
   location       = google_cloudfunctions2_function.emotion_analyzer.location
   cloud_function = google_cloudfunctions2_function.emotion_analyzer.name
   role           = "roles/cloudfunctions.invoker"
-  member         = "allUsers" #"serviceAccount:${google_service_account.airflow.email}"
+  member         = "serviceAccount:${google_service_account.airflow.email}"
 }
 
 resource "google_bigquery_connection" "emotion_analyzer_connection" {
