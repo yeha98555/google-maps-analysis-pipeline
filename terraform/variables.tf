@@ -22,4 +22,5 @@ variable "credentials" {
 variable "function_name" {
   description = "Name of the cloud function to be created"
   type        = string
+  default     = "emotion-analyzer"
 }
