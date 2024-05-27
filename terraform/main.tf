@@ -227,7 +227,7 @@ resource "google_cloud_run_service_iam_member" "emotion_analyzer_run_invoker" {
 }
 
 resource "google_bigquery_connection" "emotion_analyzer_connection" {
-    connection_id = "emotion_analyzer"
+    connection_id = var.function_name
     project = var.project_id
     location = var.region
     cloud_resource {}
