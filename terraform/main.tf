@@ -218,6 +218,14 @@ resource "google_cloudfunctions2_function_iam_member" "emotion_analyzer_invoker"
   member         = "serviceAccount:${google_service_account.airflow.email}"
 }
 
+resource "google_cloud_run_service_iam_member" "emotion_analyzer_run_invoker" {
+  project        = google_cloudfunctions2_function.emotion_analyzer.project
+  location       = google_cloudfunctions2_function.emotion_analyzer.location
+  service        = google_cloudfunctions2_function.emotion_analyzer.name
+  role           = "roles/run.invoker"
+  member         = "serviceAccount:${google_service_account.airflow.email}"
+}
+
 resource "google_bigquery_connection" "emotion_analyzer_connection" {
     connection_id = "emotion_analyzer"
     project = var.project_id
