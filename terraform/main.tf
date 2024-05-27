@@ -151,14 +151,70 @@ resource "google_project_iam_member" "viewer_sa_viewer" {
   member  = "serviceAccount:${google_service_account.viewer_sa.email}"
 }
 
-output "etl_raw_bucket_url" {
-  value = "gs://${google_storage_bucket.etl_raw.name}"
+resource "google_storage_bucket" "cloud_function_bucket" {
+  name = "${var.project_id}-${var.function_name}-${terraform.workspace}"
+  location = var.region
+  uniform_bucket_level_access = true
+  force_destroy = true
 }
 
-output "etl_processed_bucket_url" {
-  value = "gs://${google_storage_bucket.etl_processed.name}"
+data "archive_file" "src" {
+  type = "zip"
+  source_dir = "${path.root}/src/"  # Directory where the function code is located
+  output_path = "${path.root}/generated/${var.function_name}.zip"
+  #output_path = "${google_storage_bucket.cloud_function_bucket.name}/${var.function_name}.zip"
 }
 
-output "etl_archive_bucket_url" {
-  value = "gs://${google_storage_bucket.etl_archive.name}"
+resource "google_storage_bucket_object" "archive" {
+  name = "${data.archive_file.src.output_md5}.zip"
+  bucket = google_storage_bucket.cloud_function_bucket.name
+  source = data.archive_file.src.output_path
+  metadata = {
+    managed_by = "terraform"
+    environment = terraform.workspace
+  }
+}
+
+resource "google_cloudfunctions2_function" "emotion_analyzer" {
+    name = var.function_name
+    location = var.region
+    description = "Emotion Analyzer Function"
+
+    build_config {
+      runtime     = "python310"
+      entry_point = "handler"  # Set the entry point
+      source {
+        storage_source {
+          bucket = google_storage_bucket.cloud_function_bucket.name
+          object = google_storage_bucket_object.archive.name
+        }
+      }
+    }
+
+    service_config {
+      min_instance_count    = 1
+      available_memory      = "256M"
+      timeout_seconds       = 120
+    }
+
+    labels = local.common_tags
+    depends_on = [
+      google_storage_bucket.cloud_function_bucket,
+      google_storage_bucket_object.archive
+    ]
+  }
+
+resource "google_cloudfunctions2_function_iam_member" "emotion_analyzer_invoker" {
+  project        = google_cloudfunctions2_function.emotion_analyzer.project
+  location       = google_cloudfunctions2_function.emotion_analyzer.location
+  cloud_function = google_cloudfunctions2_function.emotion_analyzer.name
+  role           = "roles/cloudfunctions.invoker"
+  member         = "allUsers" #"serviceAccount:${google_service_account.airflow.email}"
+}
+
+resource "google_bigquery_connection" "emotion_analyzer_connection" {
+    connection_id = "emotion_analyzer"
+    project = var.project_id
+    location = var.region
+    cloud_resource {}
 }

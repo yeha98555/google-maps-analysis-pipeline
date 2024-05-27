@@ -18,3 +18,8 @@ variable "credentials" {
   description = "Path to your service account key file"
   type        = string
 }
+
+variable "function_name" {
+  description = "Name of the cloud function to be created"
+  type        = string
+}
