@@ -188,7 +188,7 @@ resource "google_cloudfunctions2_function" "emotion_analyzer" {
 
     build_config {
       runtime     = "python310"
-      entry_point = "handler"  # Set the entry point
+      entry_point = "analyze_sentiment"  # Set the entry point
       source {
         storage_source {
           bucket = google_storage_bucket.cloud_function_bucket.name
