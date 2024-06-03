@@ -1,0 +1,3 @@
+jieba
+snownlp
+functions-framework
