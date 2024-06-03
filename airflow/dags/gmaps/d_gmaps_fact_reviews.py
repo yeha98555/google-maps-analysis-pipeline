@@ -1,3 +1,4 @@
+import os
 from datetime import datetime, timedelta
 
 import pandas as pd
@@ -30,6 +31,22 @@ default_args = {
     tags=["gmaps"],
 )
 def d_gmaps_fact_reviews():
+    @task
+    def create_remote_udf() -> str:
+        function_name = "analyzer"
+        cloudfunctions_url = f"https://us-west1-{os.environ['GCP_PROJECT_ID']}.cloudfunctions.net/{function_name}"
+        bq_connection_name = f"{os.environ['GCP_PROJECT_ID']}.us-west1.{function_name}"
+        query = f"""
+        CREATE OR REPLACE FUNCTION `{BQ_FACT_DATASET}.analyze_sentiment`(text STRING)
+        RETURNS STRING
+        REMOTE WITH CONNECTION `{bq_connection_name}`
+        OPTIONS (
+          endpoint = '{cloudfunctions_url}'
+        );
+        """
+        query_bq(client=BQ_CLIENT, sql_query=query)
+        return "Remote UDF created."
+    
     @task
     def etl_load_reviews() -> pd.DataFrame:
         # Step 1: Execute the WITH clause query and store results in a temporary table
@@ -72,7 +89,7 @@ def d_gmaps_fact_reviews():
 
         return f"{FACT_TABLE_NAME} created."
 
-    etl_load_reviews()
+    create_remote_udf() >> etl_load_reviews()
 
 
 d_gmaps_fact_reviews()
