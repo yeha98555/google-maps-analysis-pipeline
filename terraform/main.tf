@@ -146,6 +146,12 @@ resource "google_project_iam_member" "airflow_bq_connection_user" {
   member  = "serviceAccount:${google_service_account.airflow.email}"
 }
 
+resource "google_project_iam_member" "airflow_bq_connection_delegate" {
+  project = var.project_id
+  role    = "roles/bigquery.connectionAdmin"
+  member  = "serviceAccount:${google_service_account.airflow.email}"
+}
+
 resource "google_service_account" "viewer_sa" {
   account_id   = "viewer-account"
   display_name = "Viewer Service Account"
