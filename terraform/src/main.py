@@ -17,7 +17,7 @@ stopwords = set([
 def preprocess_text(text: str) -> str:
     """
     Preprocess text: cut words and remove stopwords
-
+    
     Args:
         text (str): The text to be processed
     Returns:
