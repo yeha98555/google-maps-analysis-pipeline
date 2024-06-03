@@ -199,8 +199,11 @@ resource "google_cloudfunctions2_function" "emotion_analyzer" {
 
     service_config {
       min_instance_count    = 1
-      available_memory      = "256M"
-      timeout_seconds       = 120
+      max_instance_count    = 10
+      available_cpu         = "1"
+      available_memory      = "2Gi"
+      max_instance_request_concurrency = 80
+      timeout_seconds       = 300
     }
 
     labels = local.common_tags
