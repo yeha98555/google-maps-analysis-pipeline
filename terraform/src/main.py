@@ -34,7 +34,7 @@ def analyze_text(text: str) -> json:
     Args:
         text (str): The text to be analyzed
     Returns:
-        json: The sentiment score and processed text
+        json: The sentiment score (0 to 1), and error if error occurs
     """
     if not text.strip():
         return {"score": 0}
