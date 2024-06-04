@@ -5,6 +5,7 @@ import pandas as pd
 from google.cloud import bigquery, storage
 from utils.common import rename_place_id
 from utils.gcp import build_bq_from_gcs, download_df_from_gcs, upload_df_to_gcs
+from utils.email_callback import failure_callback
 
 from airflow.decorators import dag, task
 
@@ -21,6 +22,7 @@ default_args = {
     "start_date": datetime(2024, 5, 1),
     "retries": 1,
     "retry_delay": timedelta(minutes=5),
+    "on_failure_callback": failure_callback,
 }
 
 
