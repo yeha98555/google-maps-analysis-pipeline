@@ -1,5 +1,5 @@
-from airflow.utils.email import send_email
 from airflow.models import Variable
+from airflow.utils.email import send_email
 
 
 def failure_callback(context: dict) -> None:
@@ -21,9 +21,11 @@ def failure_callback(context: dict) -> None:
     <p>Log URL: <a href="{context['task_instance'].log_url}">Click here</a></p>
     <p>Error: {context['exception']}</p>
     """
-    send_email(to=Variable.get("alert_email", deserialize_json=True), 
-               subject=subject, 
-               html_content=html_content)
+    send_email(
+        to=Variable.get("alert_email", deserialize_json=True),
+        subject=subject,
+        html_content=html_content,
+    )
 
 
 def success_callback(context: dict) -> None:
@@ -44,9 +46,11 @@ def success_callback(context: dict) -> None:
     <p>Execution Time: {context['execution_date']}</p>
     <p>Log URL: <a href="{context['task_instance'].log_url}">Click here</a></p>
     """
-    send_email(to=Variable.get("alert_email", deserialize_json=True), 
-               subject=subject, 
-               html_content=html_content)
+    send_email(
+        to=Variable.get("alert_email", deserialize_json=True),
+        subject=subject,
+        html_content=html_content,
+    )
 
 
 def info_gsheet_callback(context: dict) -> None:
@@ -59,7 +63,7 @@ def info_gsheet_callback(context: dict) -> None:
     Returns:
         None
     """
-    subject = f"Attraction List is created"
+    subject = "Attraction List is created"
     html_content = f"""
     <h3>Attraction List is created</h3>
     <p>Google Sheet URL: <a href="{context['task_instance'].log_url}">Click here</a></p>
@@ -68,7 +72,9 @@ def info_gsheet_callback(context: dict) -> None:
     <p>Task: {context['task_instance'].task_id}</p>
     <p>DAG: {context['task_instance'].dag_id}</p>
     """
-    send_email(to=Variable.get("pm_email", deserialize_json=True), 
-               subject=subject, 
-               html_content=html_content, 
-               cc=Variable.get("alert_email", deserialize_json=True))
+    send_email(
+        to=Variable.get("pm_email", deserialize_json=True),
+        subject=subject,
+        html_content=html_content,
+        cc=Variable.get("alert_email", deserialize_json=True),
+    )
