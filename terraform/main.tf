@@ -72,30 +72,35 @@ resource "google_bigquery_dataset" "etl_src" {
   dataset_id = "etl_src"
   project    = var.project_id
   location   = var.region
+  delete_contents_on_destroy = true
 }
 
 resource "google_bigquery_dataset" "etl_ods" {
   dataset_id = "etl_ods"
   project    = var.project_id
   location   = var.region
+  delete_contents_on_destroy = true
 }
 
 resource "google_bigquery_dataset" "etl_dim" {
   dataset_id = "etl_dim"
   project    = var.project_id
   location   = var.region
+  delete_contents_on_destroy = true
 }
 
 resource "google_bigquery_dataset" "etl_fact" {
   dataset_id = "etl_fact"
   project    = var.project_id
   location   = var.region
+  delete_contents_on_destroy = true
 }
 
 resource "google_bigquery_dataset" "etl_mart" {
   dataset_id = "etl_mart"
   project    = var.project_id
   location   = var.region
+  delete_contents_on_destroy = true
 }
 
 # IAM for Airflow Service Account
