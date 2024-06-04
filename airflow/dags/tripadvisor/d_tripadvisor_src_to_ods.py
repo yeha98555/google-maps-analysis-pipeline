@@ -11,7 +11,8 @@ from airflow.decorators import dag, task
 RAW_BUCKET = os.environ.get("GCP_GCS_RAW_BUCKET")
 PROCESSED_BUCKET = os.environ.get("GCP_GCS_PROCESSED_BUCKET")
 BQ_ODS_DATASET = os.environ.get("BIGQUERY_ODS_DATASET")
-BLOB_NAME = "tripadvisor/src_tripadvisor.csv"
+SRC_BLOB_NAME = "tripadvisor/src_tripadvisor.csv"
+PROCESSED_BLOB_NAME = "tripadvisor/processed_tripadvisor_info.parquet"
 GCS_CLIENT = storage.Client()
 BQ_CLIENT = bigquery.Client()
 
@@ -135,7 +136,7 @@ def d_tripadvisor_src_to_ods():
 
     t1 = e_download_tripadvisor_from_gcs(
         bucket_name=RAW_BUCKET,
-        blob_name="src_attraction/src_tripadvisor.csv",
+        blob_name=SRC_BLOB_NAME,
     )
     t2 = t_remove_tripadvisor_unnamed_column(t1)
     t3 = t_rename_tripadvisor_columns(t2)
@@ -148,12 +149,12 @@ def d_tripadvisor_src_to_ods():
     l_upload_tripadvisor_to_gcs(
         t9,
         PROCESSED_BUCKET,
-        "tripadvisor/ods_tripadvisor_info.parquet",
+        PROCESSED_BLOB_NAME,
     ) >> l_create_tripadvisor_bq_external_table(
         dataset_name=BQ_ODS_DATASET,
         table_name="ods_tripadvisor_info",
         bucket_name=PROCESSED_BUCKET,
-        blob_name="tripadvisor/ods_tripadvisor_info.parquet",
+        blob_name=PROCESSED_BLOB_NAME,
     )
 
 
