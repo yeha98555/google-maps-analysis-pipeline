@@ -23,7 +23,7 @@ BQ_CLIENT = bigquery.Client()
 default_args = {
     "owner": "airflow",
     "start_date": datetime(2024, 5, 1),
-    "retries": 1,
+    "retries": 3,
     "retry_delay": timedelta(minutes=5),
 }
 
@@ -40,7 +40,7 @@ def d_gmaps_mart_review_trends():
         external_dag_id="d_gmaps_fact_reviews",
         external_task_id="etl_load_reviews",
         poke_interval=120,  # 每 120 秒檢查一次
-        timeout=3600,  # 總等待時間為 3600 秒
+        timeout=7200,  # 總等待時間為 7200 秒
         mode="poke",
     )
 
@@ -49,7 +49,7 @@ def d_gmaps_mart_review_trends():
         external_dag_id="d_gmaps_dim_places",
         external_task_id="l_dim_places",
         poke_interval=120,
-        timeout=3600,
+        timeout=7200,
         mode="poke",
     )
 
@@ -58,7 +58,7 @@ def d_gmaps_mart_review_trends():
         external_dag_id="d_gmaps_dim_time",
         external_task_id="l_dim_time",
         poke_interval=120,
-        timeout=3600,
+        timeout=7200,
         mode="poke",
     )
 
