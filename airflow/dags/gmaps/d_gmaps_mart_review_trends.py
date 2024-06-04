@@ -44,10 +44,10 @@ def d_gmaps_mart_review_trends():
         mode="poke",
     )
 
-    wait_for_dim_users = ExternalTaskSensor(
-        task_id="wait_for_dim_users",
-        external_dag_id="d_gmaps_dim_users",
-        external_task_id="l_dim_users",
+    wait_for_dim_places = ExternalTaskSensor(
+        task_id="wait_for_dim_places",
+        external_dag_id="d_gmaps_dim_places",
+        external_task_id="l_dim_places",
         poke_interval=120,
         timeout=3600,
         mode="poke",
@@ -108,7 +108,7 @@ def d_gmaps_mart_review_trends():
         return f"{MART_TABLE_NAME} created."
 
     (
-        [wait_for_fact_reviews, wait_for_dim_users, wait_for_dim_time]
+        [wait_for_fact_reviews, wait_for_dim_places, wait_for_dim_time]
         >> all_sensors_complete
         >> l_mart_review_trends()
     )
