@@ -192,6 +192,19 @@ services:
     volumes:
       - ${AIRFLOW_PROJ_DIR:-.}:/sources
 
+  import-variables:
+    <<: *airflow-common
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        airflow variables import /opt/airflow/config/email_variables.json
+    volumes:
+      - ${AIRFLOW_PROJ_DIR:-.}/variables:/opt/airflow/variables
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+  
   airflow-cli:
     <<: *airflow-common
     profiles:
