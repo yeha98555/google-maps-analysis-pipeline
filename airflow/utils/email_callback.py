@@ -53,7 +53,7 @@ def success_callback(context: dict) -> None:
     )
 
 
-def info_gsheet_callback(context: dict) -> None:
+def info_gsheet_callback(context: dict, url: str) -> None:
     """
     Notify the PM the Google Sheet is created, please check the attraction list
 
@@ -66,7 +66,7 @@ def info_gsheet_callback(context: dict) -> None:
     subject = "Attraction List is created"
     html_content = f"""
     <h3>Attraction List is created</h3>
-    <p>Google Sheet URL: <a href="{context['task_instance'].log_url}">Click here</a></p>
+    <p>Google Sheet URL: <a href="{url}">Click here</a></p>
     <p>Please check the attraction list. When you are done, please send a message.</p>
     ---
     <p>Task: {context['task_instance'].task_id}</p>
