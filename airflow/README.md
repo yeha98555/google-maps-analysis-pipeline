@@ -14,7 +14,7 @@
 
 ### Setup smtp Server
 
-1. Create the Google app passwords for `smtp_password` in next step. (following by [Sign in with app passwords](https://support.google.com/accounts/answer/185833?hl=en))
+1. Create the Google app passwords for `smtp_password` in next step. (follow the steps in [Sign in with app passwords](https://support.google.com/accounts/answer/185833?hl=en))
 
 2. Update the values of `smtp_user`, `smtp_password` and `smtp_mail_from` in `airflow/config/airflow.cfg`.
 
@@ -47,7 +47,3 @@ docker-compose up
 2. [d_example_data_pipeline.py](./dags/d_example_data_pipeline.py): simple data pipeline.
 - download data from gcs, and transform data, then upload to gcs and create external table.
 - query bigquery and create new table.
-
-## Reference
-
-- [TIR101 Group 2](https://github.com/harryhowiefish/TIR101_Group2): Refer to Airflow settings and Upload to GCS.
