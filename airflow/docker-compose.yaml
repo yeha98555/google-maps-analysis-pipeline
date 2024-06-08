@@ -178,6 +178,10 @@ services:
           echo "   https://airflow.apache.org/docs/apache-airflow/stable/howto/docker-compose/index.html#before-you-begin"
           echo
         fi
+        if [ -e "/sources/variables/email_variables.json" ]; then
+          airflow variables import /sources/variables/email_variables.json
+          echo "Import variables from /sources/variables/email_variables.json"
+        fi
         mkdir -p /sources/logs /sources/dags /sources/plugins
         chown -R "${AIRFLOW_UID}:0" /sources/{logs,dags,plugins}
         exec /entrypoint airflow version
@@ -191,7 +195,7 @@ services:
     user: "0:0"
     volumes:
       - ${AIRFLOW_PROJ_DIR:-.}:/sources
-
+  
   airflow-cli:
     <<: *airflow-common
     profiles:

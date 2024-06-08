@@ -1,31 +1,54 @@
 import os
 from datetime import datetime, timedelta
+from functools import partial
 
 import pandas as pd
 from google.cloud import bigquery, storage
-from utils.common import rename_place_id
-from utils.gcp import build_bq_from_gcs, download_df_from_gcs, upload_df_to_gcs
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
+from utils.email_callback import failure_callback, info_gsheet_callback
+from utils.gcp import download_df_from_gcs, upload_df_to_gcs, query_bq
 
 from airflow.decorators import dag, task
 
 RAW_BUCKET = os.environ.get("GCP_GCS_RAW_BUCKET")
 PROCESSED_BUCKET = os.environ.get("GCP_GCS_PROCESSED_BUCKET")
 BQ_ODS_DATASET = os.environ.get("BIGQUERY_ODS_DATASET")
-BLOB_NAME = "tripadvisor/src_tripadvisor.csv"
+SRC_BLOB_NAME = "tripadvisor/src_tripadvisor.csv"
+PROCESSED_BLOB_NAME = "tripadvisor/processed_tripadvisor_info.parquet"
 GCS_CLIENT = storage.Client()
 BQ_CLIENT = bigquery.Client()
+
+SERVICE_ACCOUNT_FILE = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
+scopes = [
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/drive",
+]
+credentials = service_account.Credentials.from_service_account_file(
+    SERVICE_ACCOUNT_FILE, scopes=scopes
+)
+service = build("sheets", "v4", credentials=credentials)
+
+spreadsheet_id = os.environ.get("GSHEET_TRIPADVISOR_SPREADSHEET_ID")
+spreadsheet_url = f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/edit#gid=0"
+info_gsheet_callback_with_url = partial(
+    info_gsheet_callback,
+    url=spreadsheet_url,
+)
+range_name = "attraction_list"
 
 default_args = {
     "owner": "airflow",
     "start_date": datetime(2024, 5, 1),
     "retries": 1,
     "retry_delay": timedelta(minutes=5),
+    "on_failure_callback": failure_callback,
 }
 
 
 @dag(
     default_args=default_args,
-    schedule_interval=None,  # Because this is triggered by another DAG
+    schedule_interval=None,
     catchup=False,
     tags=["tripadvisor"],
 )
@@ -97,13 +120,6 @@ def d_tripadvisor_src_to_ods():
         return df
 
     @task
-    def t_add_attraction_id(df: pd.DataFrame) -> pd.DataFrame:
-        df["attraction_id"] = df["attraction_name"].apply(
-            lambda x: rename_place_id(str(x))
-        )
-        return df
-
-    @task
     def l_upload_tripadvisor_to_gcs(df: pd.DataFrame, bucket_name: str, blob_name: str):
         upload_df_to_gcs(
             client=GCS_CLIENT,
@@ -112,30 +128,52 @@ def d_tripadvisor_src_to_ods():
             df=df,
         )
 
+    @task(on_success_callback=info_gsheet_callback_with_url)
+    def l_df_to_gsheet(service, spreadsheet_id: str, df: pd.DataFrame):
+        df.sort_values(by="total_reviews", ascending=False, inplace=True)
+        df = df.fillna("")  # NaN is invalid for GSheet
+
+        body = {"values": [df.columns.tolist()] + df.values.tolist()}
+        result = (
+            service.spreadsheets()
+            .values()
+            .update(
+                spreadsheetId=spreadsheet_id,
+                range=range_name,
+                valueInputOption="RAW",
+                body=body,
+            )
+            .execute()
+        )
+
+        print(f"{result.get('updatedCells')} cells updated.")
+
     @task
     def l_create_tripadvisor_bq_external_table(
         dataset_name: str, table_name: str, bucket_name: str, blob_name: str
     ):
-        build_bq_from_gcs(
-            client=BQ_CLIENT,
-            dataset_name=dataset_name,
-            table_name=table_name,
-            bucket_name=bucket_name,
-            blob_name=blob_name,
-            schema=[
-                bigquery.SchemaField("attraction_id", "STRING", mode="REQUIRED"),
-                bigquery.SchemaField("info", "STRING"),
-                bigquery.SchemaField("photo", "STRING"),
-                bigquery.SchemaField("attraction_name", "STRING", mode="REQUIRED"),
-                bigquery.SchemaField("rating", "FLOAT"),
-                bigquery.SchemaField("total_reviews", "INTEGER"),
-                bigquery.SchemaField("categories", "STRING"),
-            ],
+        query = f"""
+        CREATE OR REPLACE EXTERNAL TABLE `{dataset_name}.{table_name}` (
+            attraction_id STRING,
+            info STRING,
+            photo STRING,
+            attraction_name STRING,
+            rating FLOAT64,
+            total_reviews INTEGER,
+            categories STRING
         )
+        OPTIONS (
+            format = 'GOOGLE_SHEETS',
+            skip_leading_rows = 1,  -- Skip header row, adjust if needed
+            sheet_range={range_name},
+            uris = ['{spreadsheet_url}']
+        );
+        """
+        query_bq(BQ_CLIENT, query)
 
     t1 = e_download_tripadvisor_from_gcs(
         bucket_name=RAW_BUCKET,
-        blob_name="src_attraction/src_tripadvisor.csv",
+        blob_name=SRC_BLOB_NAME,
     )
     t2 = t_remove_tripadvisor_unnamed_column(t1)
     t3 = t_rename_tripadvisor_columns(t2)
@@ -144,16 +182,21 @@ def d_tripadvisor_src_to_ods():
     t6 = t_rename_tripadvisor_rating_values(t5)
     t7 = t_remove_tripadvisor_total_reviews_values(t6)
     t8 = t_convert_tripadvisor_categories_to_list(t7)
-    t9 = t_add_attraction_id(t8)
-    l_upload_tripadvisor_to_gcs(
-        t9,
-        PROCESSED_BUCKET,
-        "tripadvisor/ods_tripadvisor_info.parquet",
+
+    l_df_to_gsheet(
+        service=service,
+        spreadsheet_id=spreadsheet_id,
+        df=t8,
     ) >> l_create_tripadvisor_bq_external_table(
         dataset_name=BQ_ODS_DATASET,
-        table_name="ods_tripadvisor_info",
+        table_name="ods-tripadvisor",
         bucket_name=PROCESSED_BUCKET,
-        blob_name="tripadvisor/ods_tripadvisor_info.parquet",
+        blob_name=PROCESSED_BLOB_NAME,
+    )
+    l_upload_tripadvisor_to_gcs(
+        t8,
+        PROCESSED_BUCKET,
+        PROCESSED_BLOB_NAME,
     )
 
 

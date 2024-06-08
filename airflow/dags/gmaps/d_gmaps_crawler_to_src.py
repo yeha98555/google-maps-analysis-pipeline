@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from docker.types import Mount
 from google.cloud import bigquery
 from utils.common import load_config
+from utils.email_callback import failure_callback
 from utils.gcp import query_bq_to_df
 
 from airflow.decorators import dag, task
@@ -25,6 +26,7 @@ default_args = {
     "start_date": datetime(2024, 5, 1),
     "retries": 1,
     "retry_delay": timedelta(minutes=5),
+    "on_failure_callback": failure_callback,
 }
 
 
@@ -45,8 +47,9 @@ def d_gmaps_crawler_to_src():
                 `{BQ_ODS_DATASET}.ods_tripadvisor_info`
         """
         df = query_bq_to_df(BQ_CLIENT, query)[:top_n]
+        print(f"total attractions: {len(df)}")
         # random df to avoid task 1 always crawler the attraction with more reviews
-        df = df.sample(frac=1).reset_index(drop=True)
+        df = df.sample(frac=1, random_state=42).reset_index(drop=True)
         attractions = df.to_dict(orient="records")
         # batch
         batch_size = 200  # default max_map_length is 1024

@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 import pandas as pd
 from google.cloud import bigquery
 from utils.common import load_config, table_name_with_env
+from utils.email_callback import failure_callback
 from utils.gcp import query_bq
 
 from airflow.decorators import dag, task
@@ -21,6 +22,7 @@ default_args = {
     "start_date": datetime(2024, 5, 1),
     "retries": 1,
     "retry_delay": timedelta(minutes=5),
+    "on_failure_callback": failure_callback,
 }
 
 
@@ -46,9 +48,9 @@ def d_gmaps_fact_reviews():
         """
         query_bq(client=BQ_CLIENT, sql_query=query)
         return "Remote UDF created."
-    
+
     @task
-    def etl_load_reviews() -> pd.DataFrame:
+    def etl_add_emtion_and_create_fact_reviews() -> pd.DataFrame:
         # Step 1: Execute the WITH clause query and store results in a temporary table
         temp_table_name = f"{BQ_FACT_DATASET}.temp_sentiment_analysis"
         query_step_1 = f"""
@@ -89,7 +91,7 @@ def d_gmaps_fact_reviews():
 
         return f"{FACT_TABLE_NAME} created."
 
-    create_remote_udf() >> etl_load_reviews()
+    create_remote_udf() >> etl_add_emtion_and_create_fact_reviews()
 
 
 d_gmaps_fact_reviews()
