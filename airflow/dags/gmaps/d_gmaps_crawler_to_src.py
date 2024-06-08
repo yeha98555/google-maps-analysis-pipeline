@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from docker.types import Mount
 from google.cloud import bigquery
 from utils.common import load_config
+from utils.email_callback import failure_callback
 from utils.gcp import query_bq_to_df
 
 from airflow.decorators import dag, task
@@ -25,6 +26,7 @@ default_args = {
     "start_date": datetime(2024, 5, 1),
     "retries": 1,
     "retry_delay": timedelta(minutes=5),
+    "on_failure_callback": failure_callback,
 }
 
 
