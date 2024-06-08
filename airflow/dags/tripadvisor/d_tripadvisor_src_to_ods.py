@@ -7,7 +7,7 @@ from google.cloud import bigquery, storage
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from utils.email_callback import failure_callback, info_gsheet_callback
-from utils.gcp import download_df_from_gcs, upload_df_to_gcs
+from utils.gcp import download_df_from_gcs, upload_df_to_gcs, query_bq
 
 from airflow.decorators import dag, task
 
@@ -30,10 +30,12 @@ credentials = service_account.Credentials.from_service_account_file(
 service = build("sheets", "v4", credentials=credentials)
 
 spreadsheet_id = os.environ.get("GSHEET_TRIPADVISOR_SPREADSHEET_ID")
+spreadsheet_url = f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/edit#gid=0"
 info_gsheet_callback_with_url = partial(
     info_gsheet_callback,
-    url=f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/edit#gid=0",
+    url=spreadsheet_url,
 )
+range_name = "attraction_list"
 
 default_args = {
     "owner": "airflow",
@@ -132,7 +134,6 @@ def d_tripadvisor_src_to_ods():
         df = df.fillna("")  # NaN is invalid for GSheet
 
         body = {"values": [df.columns.tolist()] + df.values.tolist()}
-        range_name = "Sheet1!A1"
         result = (
             service.spreadsheets()
             .values()
@@ -151,8 +152,24 @@ def d_tripadvisor_src_to_ods():
     def l_create_tripadvisor_bq_external_table(
         dataset_name: str, table_name: str, bucket_name: str, blob_name: str
     ):
-        # FIXME: build_bq_from_gsheet
-        pass
+        query = f"""
+        CREATE OR REPLACE EXTERNAL TABLE `{dataset_name}.{table_name}` (
+            attraction_id STRING,
+            info STRING,
+            photo STRING,
+            attraction_name STRING,
+            rating FLOAT64,
+            total_reviews INTEGER,
+            categories STRING
+        )
+        OPTIONS (
+            format = 'GOOGLE_SHEETS',
+            skip_leading_rows = 1,  -- Skip header row, adjust if needed
+            sheet_range={range_name},
+            uris = ['{spreadsheet_url}']
+        );
+        """
+        query_bq(BQ_CLIENT, query)
 
     t1 = e_download_tripadvisor_from_gcs(
         bucket_name=RAW_BUCKET,
