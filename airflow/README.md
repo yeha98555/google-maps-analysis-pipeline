@@ -14,7 +14,7 @@
 
 ### Setup smtp Server
 
-1. Create the Google app passwords for `smtp_password` in next step. (following by [Sign in with app passwords](https://support.google.com/accounts/answer/185833?hl=en))
+1. Create the Google app passwords for `smtp_password` in next step. (follow the steps in [Sign in with app passwords](https://support.google.com/accounts/answer/185833?hl=en))
 
 2. Update the values of `smtp_user`, `smtp_password` and `smtp_mail_from` in `airflow/config/airflow.cfg`.
 

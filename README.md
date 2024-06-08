@@ -10,10 +10,9 @@ Before running this project, you must have the following installed:
 - Docker (v26.1.4 or later)
 - Airflow (v2.9.1)
 
+## Installation
+### Setup Terraform
+Refer to the detailed instructions in [Terraform README](./terraform/README.md) for setting up Terraform.
 
-## Usage
-
-1. Setup Terraform, see [Terraform README](./terraform/README.md)
-
-2. Setup Airflow, see [Airflow README](./airflow/README.md)
-
+### Setup Airflow
+For setting up Airflow, follow the steps provided in [Airflow README](./airflow/README.md).
