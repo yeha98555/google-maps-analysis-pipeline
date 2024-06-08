@@ -3,8 +3,12 @@
 ## Introduction
 This project is a specialized continuation of [a previously team-managed project](https://github.com/yeha98552/tibame-project) hosted under a different account. Originally designed to serve a broader scope, this fork has been tailored to focus more intensively on specific functionalities related to analyzing and visualizing travel attractions in Taiwan. After forking, parts of the project that were not aligned with the new objectives were removed to streamline and specialize the application.
 
-## Overview
-This project develops a comprehensive data pipeline to analyze and visualize key metrics about travel attractions in Taiwan. Utilizing data processing technologies and cloud infrastructure, it incorporates data extracted from Google Maps reviews. This integration aims to provide valuable insights for tourists and businesses interested in the Taiwanese tourism sector.
+## Features
+- **Data Pipeline**
+  - **Data Collection**: Utilizes a crawler to gather attraction information from Google Maps Reviews based on lists from TripAdvisor.
+  - **Data Organization**: Structures the collected data into a well-defined schema within a data warehouse, including source (`src`), operational data store (`ods`), fact tables, and dimension tables (`dim`). This organization supports efficient data analysis and trend identification.
+- **Cloud Infrastructure**
+- **Data Visualization**
 
 ## Prerequisites
 Before running this project, you must have the following installed:
@@ -71,3 +75,4 @@ Technologies used in this project
 ├── .gitignore                   // Git ignore configuration, specifying files that don't need version control
 └── README.md                    // Project description file
 ```
+
