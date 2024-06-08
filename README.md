@@ -1,5 +1,8 @@
 # Taiwan Travel Attractions Analysis Data Pipeline
 
+## Introduction
+This project is a specialized continuation of [a previously team-managed project](https://github.com/yeha98552/tibame-project) hosted under a different account. Originally designed to serve a broader scope, this fork has been tailored to focus more intensively on specific functionalities related to analyzing and visualizing travel attractions in Taiwan. After forking, parts of the project that were not aligned with the new objectives were removed to streamline and specialize the application.
+
 ## Overview
 This project develops a comprehensive data pipeline to analyze and visualize key metrics about travel attractions in Taiwan. Utilizing data processing technologies and cloud infrastructure, it incorporates data extracted from Google Maps reviews. This integration aims to provide valuable insights for tourists and businesses interested in the Taiwanese tourism sector.
 
