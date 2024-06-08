@@ -8,7 +8,6 @@ Before running this project, you must have the following installed:
 
 - Terraform (v1.8.5 or later)
 - Docker (v26.1.4 or later)
-- Airflow (v2.9.1)
 
 ## Installation
 ### Setup Terraform
