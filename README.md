@@ -15,3 +15,17 @@ Refer to the detailed instructions in [Terraform README](./terraform/README.md) 
 
 ### Setup Airflow
 For setting up Airflow, follow the steps provided in [Airflow README](./airflow/README.md).
+
+## Tech Stack
+Technologies used in this project
+
+- **Google Cloud**: Provides the computing and storage resources, specifically using Google Cloud Storage, BigQuery and Cloud Functions.
+- **Terraform**: Manages the infrastructure as code.
+- **Airflow**: Orchestrates and schedules the data pipeline workflows.
+- **Python**: Used for scripting and data manipulation tasks, with key libraries including:
+  - **Pandas**: For data manipulation and analysis.
+  - **PyArrow**: For efficient data storage and retrieval.
+  - **SQLAlchemy**: For database interaction.
+  - **Psycopg2-binary**: For PostgreSQL database connectivity.
+  - **jieba**: For Chinese text segmentation.
+  - **SnowNLP**: For sentiment analysis of Chinese text.
