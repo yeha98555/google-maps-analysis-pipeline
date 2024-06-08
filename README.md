@@ -32,7 +32,7 @@ Technologies used in this project
 
 ## Project Structure
 
-```javascript
+```
 .
 ├── .git                         // Folder for Git version control system
 ├── .vscode                      // Visual Studio Code configuration folder
