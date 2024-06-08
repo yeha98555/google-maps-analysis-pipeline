@@ -47,7 +47,3 @@ docker-compose up
 2. [d_example_data_pipeline.py](./dags/d_example_data_pipeline.py): simple data pipeline.
 - download data from gcs, and transform data, then upload to gcs and create external table.
 - query bigquery and create new table.
-
-## Reference
-
-- [TIR101 Group 2](https://github.com/harryhowiefish/TIR101_Group2): Refer to Airflow settings and Upload to GCS.
