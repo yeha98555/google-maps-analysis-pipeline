@@ -58,7 +58,7 @@ Technologies used in this project
 |   └── README.md                // Airflow description file
 ├── terraform
 |   ├── src                      // Contains the source code for Cloud Functions
-|   ├── generated                
+|   ├── generated                // Stores zipped packages of the src content after running Terraform (automatically generated)
 |   ├── main.tf                  // Main Terraform configuration file
 |   ├── output.tf                // Terraform output configuration
 |   ├── variables.tf             // Terraform variables definition
