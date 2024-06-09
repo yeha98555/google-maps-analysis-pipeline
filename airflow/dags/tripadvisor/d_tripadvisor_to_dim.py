@@ -43,10 +43,7 @@ def d_tripadvisor_to_dim():
     @task
     def e_download_tripadvisor_from_bq() -> pd.DataFrame:
         query = f"""
-        SELECT
-            *
-        FROM `{BQ_ODS_DATASET}.{ODS_TABLE_NAME}`
-        ORDER BY `total_reviews` DESC
+        SELECT * FROM `{BQ_ODS_DATASET}.{ODS_TABLE_NAME}`
         """
         df = query_bq_to_df(BQ_CLIENT, query)
         return df
