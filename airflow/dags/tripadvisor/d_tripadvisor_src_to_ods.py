@@ -159,7 +159,7 @@ def d_tripadvisor_src_to_ods():
             photo STRING,
             attraction_name STRING,
             rating FLOAT64,
-            total_reviews INTEGER,
+            total_reviews STRING,
             categories STRING
         )
         OPTIONS (
