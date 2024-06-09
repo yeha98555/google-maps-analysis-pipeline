@@ -150,7 +150,7 @@ def d_tripadvisor_src_to_ods():
 
     @task
     def l_create_tripadvisor_bq_external_table(
-        dataset_name: str, table_name: str, bucket_name: str, blob_name: str
+        dataset_name: str, table_name: str
     ):
         query = f"""
         CREATE OR REPLACE EXTERNAL TABLE `{dataset_name}.{table_name}` (
@@ -190,8 +190,6 @@ def d_tripadvisor_src_to_ods():
     ) >> l_create_tripadvisor_bq_external_table(
         dataset_name=BQ_ODS_DATASET,
         table_name="ods-tripadvisor",
-        bucket_name=PROCESSED_BUCKET,
-        blob_name=PROCESSED_BLOB_NAME,
     )
     l_upload_tripadvisor_to_gcs(
         t8,
