@@ -13,7 +13,7 @@ from airflow.providers.docker.operators.docker import DockerOperator
 
 config = load_config()
 RAW_BUCKET = config["gcp"]["bucket"]["raw"]
-BQ_ODS_DATASET = config["gcp"]["bigquery"]["ods_dataset"]
+BQ_DIM_DATASET = config["gcp"]["bigquery"]["dim_dataset"]
 BLOB_NAME = config["gcp"]["blob"]["gmaps"]["prefix"]
 CRAWER_GOOGLE_CREDENTIALS_LOCAL_PATH = os.environ.get(
     "CRAWER_GOOGLE_CREDENTIALS_LOCAL_PATH"
@@ -44,7 +44,7 @@ def d_gmaps_crawler_to_src():
                 attraction_id,
                 attraction_name
             FROM
-                `{BQ_ODS_DATASET}.ods_tripadvisor_info`
+                `{BQ_DIM_DATASET}.dim-tripadvisor`
         """
         df = query_bq_to_df(BQ_CLIENT, query)[:top_n]
         print(f"total attractions: {len(df)}")
