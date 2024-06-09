@@ -1,7 +1,3 @@
-# processed_tripadvisor_info.parquet -> google sheet
-# google sheet -> external table to ods-tripadvisor
-
-
 import os
 from datetime import datetime, timedelta
 
