@@ -154,12 +154,11 @@ def d_tripadvisor_src_to_ods():
     ):
         query = f"""
         CREATE OR REPLACE EXTERNAL TABLE `{dataset_name}.{table_name}` (
-            attraction_id STRING,
             info STRING,
             photo STRING,
             attraction_name STRING,
             rating FLOAT64,
-            total_reviews STRING,
+            total_reviews INTEGER,
             categories STRING
         )
         OPTIONS (
