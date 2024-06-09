@@ -41,13 +41,14 @@ def d_gmaps_crawler_to_src():
     def get_attraction_list(top_n: int = 1500) -> list[list[dict]]:
         query = f"""
             SELECT DISTINCT
-                attraction_id,
-                attraction_name
+                `attraction_id`,
+                `attraction_name`,
+                `total_reviews`,
             FROM
                 `{BQ_DIM_DATASET}.dim-tripadvisor`
             ORDER BY `total_reviews` DESC
         """
-        df = query_bq_to_df(BQ_CLIENT, query)[:top_n]
+        df = query_bq_to_df(BQ_CLIENT, query)[:top_n][["attraction_id", "attraction_name"]]
         print(f"total attractions: {len(df)}")
         # random df to avoid task 1 always crawler the attraction with more reviews
         df = df.sample(frac=1, random_state=42).reset_index(drop=True)
