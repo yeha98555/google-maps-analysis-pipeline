@@ -45,6 +45,7 @@ def d_gmaps_crawler_to_src():
                 attraction_name
             FROM
                 `{BQ_DIM_DATASET}.dim-tripadvisor`
+            ORDER BY `total_reviews` DESC
         """
         df = query_bq_to_df(BQ_CLIENT, query)[:top_n]
         print(f"total attractions: {len(df)}")
