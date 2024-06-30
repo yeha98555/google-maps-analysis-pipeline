@@ -246,3 +246,11 @@ resource "google_bigquery_connection" "emotion_analyzer_connection" {
     location = var.region
     cloud_resource {}
 }
+
+module "composer" {
+  source = "./modules/composer"
+
+  project_id  = var.project_id
+  common_tags = local.common_tags
+  airflow_sa_email = google_service_account.airflow.email
+}

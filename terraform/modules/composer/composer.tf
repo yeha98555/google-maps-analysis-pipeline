@@ -13,7 +13,7 @@ resource "google_project_service" "composer_api" {
 resource "google_project_iam_member" "composer_sa" {
   project = var.project_id
   role    = "roles/composer.worker"
-  member  =  "serviceAccount:${google_service_account.airflow.email}"
+  member  = "serviceAccount:${var.airflow_sa_email}"
   # member  = "serviceAccount:${google_service_account.composer_sa.email}"
 }
 
@@ -27,25 +27,27 @@ resource "google_composer_environment" "gmaps_composer_env" {
 
     workloads_config {
       scheduler {
-        cpu        = 1
-        memory_gb  = 4
-        storage_gb = 10
+        cpu        = var.scheduler_cpu
+        memory_gb  = var.scheduler_memory_gb
+        storage_gb = var.scheduler_storage_gb
       }
       web_server {
-        cpu        = 1
-        memory_gb  = 4
-        storage_gb = 10
+        cpu        = var.web_server_cpu
+        memory_gb  = var.web_server_memory_gb
+        storage_gb = var.web_server_storage_gb
       }
       worker {
-        cpu        = 1
-        memory_gb  = 4
-        storage_gb = 10
+        cpu        = var.worker_cpu
+        memory_gb  = var.worker_memory_gb
+        storage_gb = var.worker_storage_gb
+        min_count  = var.worker_min_count
+        max_count  = var.worker_max_count
       }
     }
-    environment_size = "ENVIRONMENT_SIZE_SMALL"
+    environment_size = var.environment_size
   }
 
-  labels = local.common_tags
+  labels = var.common_tags
 
   depends_on = [google_project_service.composer_api]
 }
